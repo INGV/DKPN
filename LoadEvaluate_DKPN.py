@@ -1,19 +1,8 @@
 #!/usr/bin/env python
-# coding: utf-8
-
-# # EVALUATE MODEL loading from disk
-# 
-# Evaluate DKPN..
-# 
-# -----------------------------------------------------------------
-
-# In[1]:
-
 
 import os
-import sys
-import copy
 import pickle
+import argparse
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -24,88 +13,101 @@ import obspy
 import torch
 import seisbench as sb
 import seisbench.models as sbm
-import seisbench.data as sbd
 
 import dkpn.core as dkcore
 import dkpn.train as dktrain
 
 import dkpn.eval_utils as EV
 
+
 print(" SB version:  %s" % sb.__version__)
 print("OBS version:  %s" % obspy.__version__)
+print("")
+
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+parser = argparse.ArgumentParser(description=(
+                                "Script for comparing DKPN and PhaseNet models. "
+                                "It needs to have the 'dkpn' folder in the working path. "
+                                "The residuals plot "
+                                "Requires Python >= 3.9"))
+
+parser.add_argument('-d', '--dataset_name', type=str, default='ETHZ', help='Dataset name for TEST')
+parser.add_argument('-s', '--dataset_size', type=str, default='Nano', help='Dataset size')
+parser.add_argument('-r', '--random_seed', type=int, default=42, help='Random seed')
+parser.add_argument('-o', '--store_folder', type=str, default='trained_results', help='Comparison Results folder')
+#
+parser.add_argument('-k', '--dkpn_model_name', type=str, required=True, help='DKPN model path')
+parser.add_argument('-p', '--pn_model_name', type=str, required=True, help='PN model path')
+parser.add_argument('-x', '--pickthreshold_p', type=float, default=0.2, help='Pick threshold P')
+parser.add_argument('-y', '--pickthreshold_s', type=float, default=0.2, help='Pick threshold S')
+parser.add_argument('-n', '--test_samples', type=int, default=5000, help='Number of test samples')
+parser.add_argument('-f', '--nplots', type=int, default=10, help='Number of examples plots')
+#
+args = parser.parse_args()
+
+# Your main function here
+print(f"DKPN_MODEL_NAME: {args.dkpn_model_name}")
+print(f"PN_MODEL_NAME: {args.pn_model_name}")
+print("")
+print(f"DATASET_NAME: {args.dataset_name}")
+print(f"DATASET_SIZE: {args.dataset_size}")
+print(f"RANDOM_SEED: {args.random_seed}")
+print(f"STORE_FOLDER: {args.store_folder}")
+print("")
+print(f"PICK_THR_P: {args.pickthreshold_p}")
+print(f"PICK_THR_S: {args.pickthreshold_s}")
+print(f"NPLOTS: {args.nplots}")
+print(f"NSAMPLES: {args.test_samples}")
 
 
-# In[9]:
-
-
-# ============================================
-DATASET_TRAIN = "ETHZ"
-DATASET_TEST = "ETHZ"
-DATASET_SIZE = "Nano"
-RANDOM_SEED = 42
-
-DKPN_MODEL_NAME = "DKPN_TrainDataSet_ETHZ_Size_Nano_Rnd_42_Epochs_2_LR_0.0100_Batch_10"
-DKPN_MODEL_PATH = Path(DKPN_MODEL_NAME+"/"+DKPN_MODEL_NAME+".pt")
-
-PN_MODEL_NAME = "PN_TrainDataSet_ETHZ_Size_Nano_Rnd_42_Epochs_2_LR_0.0100_Batch_20"
-PN_MODEL_PATH = Path(PN_MODEL_NAME+"/"+PN_MODEL_NAME+".pt")
-
-# ============================================
-
-STORE_DIR_RESULTS = Path("TRAIN_TEST_RESULTS")
+DKPN_MODEL_PATH = Path(args.dkpn_model_name+"/"+args.dkpn_model_name+".pt")
+PN_MODEL_PATH = Path(args.pn_model_name+"/"+args.pn_model_name+".pt")
+STORE_DIR_RESULTS = Path(args.store_folder)
 if not STORE_DIR_RESULTS.is_dir():
-    STORE_DIR_RESULTS.mkdir()
+    STORE_DIR_RESULTS.mkdir(parents=True, exist_ok=True)
 
-# ============================================
-
-PICKTHRESHOLD_P = 0.2
-PICKTHRESHOLD_S = 0.2
-PLOTS = True
-NPLOTS = 5
-
-TEST_SAMPLES = 5000
-GORANDOM = True  # For test-sample selection
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 
 # ### SELECT DATASET and SIZE
-# 
+#
 # Here you can decide to load the same dataset for _In-Domain_ tests, or a different one for _Cross-Domain_ testing.
 
-# In[5]:
+# In[3]:
 
 
 (dataset_train, dataset_test) = dktrain.select_database_and_size(
-                                    DATASET_TRAIN, DATASET_TEST, DATASET_SIZE, RANDOM_SEED=RANDOM_SEED)
+                                    args.dataset_name, args.dataset_name, args.dataset_size, RANDOM_SEED=args.random_seed)
 train = dataset_train.train()
 dev = dataset_train.dev()
 test = dataset_test.test()
 
-print("TRAIN samples %s:  %d" % (DATASET_TRAIN, len(train)))
-print("  DEV samples %s:  %d" % (DATASET_TRAIN, len(dev)))
-print(" TEST samples %s:  %d" % (DATASET_TEST, len(test)))
+print("TRAIN samples %s:  %d" % (args.dataset_name, len(train)))
+print("  DEV samples %s:  %d" % (args.dataset_name, len(dev)))
+print(" TEST samples %s:  %d" % (args.dataset_name, len(test)))
 
 
 # ### INITIALIZE PICKERS
-# 
-# Here we make sure to have correctly loaded them with their defaults
 
-# In[10]:
+# =================================================================
+# =================================================================
 
-
-# Print loading
-print("Loading DKPN ... ")
+print("Loading DKPN ... %s" % Path(args.dkpn_model_name).name)
 mydkpn = dkcore.DKPN()
 mydkpn.load_state_dict(torch.load(str(DKPN_MODEL_PATH), map_location=torch.device('cpu')))
-# mydkpn.cuda();
+mydkpn.cuda();
+mydkpn.eval();
 
-print("Loading PN ... ")
+print("Loading PN ... %s" % Path(args.pn_model_name).name)
 mypn = sbm.PhaseNet()
 mypn.load_state_dict(torch.load(str(PN_MODEL_PATH), map_location=torch.device('cpu')))
-
-# =================================================================
-# =================================================================
-mydkpn.eval();
+mypn.cuda();
 mypn.eval();
+
 # =================================================================
 # =================================================================
 
@@ -136,7 +138,7 @@ TRAIN_CLASS_DKPN = dktrain.TrainHelp_DomainKnowledgePhaseNet(
                 dev,
                 test,
 
-                augmentations_par = {
+                augmentations_par={
                     "amp_norm_type": "std",
                     "window_strategy": "move",  # "pad"
                     "final_windowlength": 3001,
@@ -163,25 +165,22 @@ TRAIN_CLASS_DKPN = dktrain.TrainHelp_DomainKnowledgePhaseNet(
 # ========================  AUGMENTATIONS DKPN
 (train_generator_dkpn, dev_generator_dkpn, test_generator_dkpn) = TRAIN_CLASS_DKPN.get_generator()
 
+# ========================  CREATE A LIST OF UNIQUE INDEX FROM RANDOM ... AVOID DUPLICATES
+rng = np.random.default_rng(seed=args.random_seed)
+rnidx = rng.choice(np.arange(args.test_samples), size=args.test_samples, replace=False)
 
-# In[13]:
 
-
-# CREATE A LIST OF UNIQUE INDEX FROM RANDOM ... AVOID DUPLICATES
-if GORANDOM:
-    rng = np.random.default_rng(seed=RANDOM_SEED)
-    rnidx = rng.choice(np.arange(TEST_SAMPLES), size=TEST_SAMPLES, replace=False)
 # --------------------------------------------------------------
 
-do_stats_on = [#(dev_generator_dkpn, "DEV_DKPN", "DEV_PN"),
-               (test_generator_dkpn, "TEST_DKPN", "TEST_PN")
+do_stats_on = [# (dev_generator_dkpn, "DEV_DKPN", "DEV_PN"),
+               (test_generator_dkpn, "TEST_DKPN", "TEST_PN"),
                    ]
 
 dkpn_p_pick_residuals, dkpn_s_pick_residuals = [], []
 pn_p_pick_residuals, pn_s_pick_residuals = [], []
 
 
-for (DKPN_gen, DKPN_gen_name, PN_gen_name) in  do_stats_on:
+for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
     
     print("Working with:  %s + %s" % (DKPN_gen_name, PN_gen_name))
     DKPN_stats_dict_P, DKPN_stats_dict_S = EV.__reset_stats_dict__(), EV.__reset_stats_dict__()
@@ -189,18 +188,14 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in  do_stats_on:
 
     figureidx = 0
     
-    for xx in tqdm(range(TEST_SAMPLES)):
+    for xx in tqdm(range(args.test_samples)):
 
-        if GORANDOM:
-            DKPN_sample = DKPN_gen[rnidx[xx]]
-        else:
-            DKPN_sample = DKPN_gen[xx]
-
+        DKPN_sample = DKPN_gen[rnidx[xx]]
         # Create equal window for PN (stored in Xorig of DKPN, but we must remove the 400 sample stab.)
         PN_sample = {}
-        PN_sample["X"] = DKPN_sample["Xorig"][:, 400:] # <-- To remove the FP stabilization
+        PN_sample["X"] = DKPN_sample["Xorig"][:, 400:]  # <-- To remove the FP stabilization
         PN_sample["y"] = DKPN_sample["y"]
-            
+
         # ----------------- Do PREDICTIONS
         # print("... Doing Predictions!")
         with torch.no_grad():
@@ -211,27 +206,33 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in  do_stats_on:
             PN_pred = mypn(torch.tensor(PN_sample["X"], device=mydkpn.device).unsqueeze(0))  # Add a fake batch dimension
             PN_pred = PN_pred[0].cpu().numpy()
 
-
+        # ------------------------------------------------------------
         # ----------------- Do STATISTICS DKPN
-        # print("... Doing Statistics on DKPN")
+
         # P
-        (DKPN_P_picks_model, DKPN_P_widths_model) = EV.extract_picks(DKPN_pred[0], 
-                                                                  smooth=True,
-                                                                  thr=PICKTHRESHOLD_P)
-        (DKPN_P_picks_label, DKPN_P_widths_label) = EV.extract_picks(DKPN_sample["y"][0], 
-                                                                  smooth=True,
-                                                                  thr=PICKTHRESHOLD_P)
+        (DKPN_P_picks_model, DKPN_P_widths_model) = EV.extract_picks(
+                                                        DKPN_pred[0],
+                                                        smooth=True,
+                                                        thr=args.pickthreshold_p)
+        (DKPN_P_picks_label, DKPN_P_widths_label) = EV.extract_picks(
+                                                        DKPN_sample["y"][0],
+                                                        smooth=True,
+                                                        thr=args.pickthreshold_p)
+
         (DKPN_stats_dict_P, DKPN_residual_TP_P) = EV.compare_picks(
                                           DKPN_P_picks_model, 
                                           DKPN_P_picks_label, 
                                           DKPN_stats_dict_P)
         # S
-        (DKPN_S_picks_model, DKPN_S_widths_model) = EV.extract_picks(DKPN_pred[1], 
-                                                                  smooth=True,
-                                                                  thr=PICKTHRESHOLD_S)
-        (DKPN_S_picks_label, DKPN_S_widths_label) = EV.extract_picks(DKPN_sample["y"][1], 
-                                                                  smooth=True,
-                                                                  thr=PICKTHRESHOLD_S)
+        (DKPN_S_picks_model, DKPN_S_widths_model) = EV.extract_picks(
+                                                        DKPN_pred[1],
+                                                        smooth=True,
+                                                        thr=args.pickthreshold_s)
+        (DKPN_S_picks_label, DKPN_S_widths_label) = EV.extract_picks(
+                                                        DKPN_sample["y"][1],
+                                                        smooth=True,
+                                                        thr=args.pickthreshold_s)
+
         (DKPN_stats_dict_S, DKPN_residual_TP_S) = EV.compare_picks(
                                           DKPN_S_picks_model, 
                                           DKPN_S_picks_label, 
@@ -240,27 +241,33 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in  do_stats_on:
         dkpn_p_pick_residuals.extend(DKPN_residual_TP_P)
         dkpn_s_pick_residuals.extend(DKPN_residual_TP_S)
 
-
+        # ------------------------------------------------------------
         # ----------------- Do STATISTICS PN
-        # print("... Doing Statistics on PHASENET")
+
         # P
-        (PN_P_picks_model, PN_P_widths_model) = EV.extract_picks(PN_pred[0], 
-                                                              smooth=True,
-                                                              thr=PICKTHRESHOLD_P)
-        (PN_P_picks_label, PN_P_widths_label) = EV.extract_picks(PN_sample["y"][0], 
-                                                              smooth=True,
-                                                              thr=PICKTHRESHOLD_P)
+        (PN_P_picks_model, PN_P_widths_model) = EV.extract_picks(
+                                                        PN_pred[0],
+                                                        smooth=True,
+                                                        thr=args.pickthreshold_p)
+        (PN_P_picks_label, PN_P_widths_label) = EV.extract_picks(
+                                                        PN_sample["y"][0],
+                                                        smooth=True,
+                                                        thr=args.pickthreshold_p)
+
         (PN_stats_dict_P, PN_residual_TP_P) = EV.compare_picks(
                                         PN_P_picks_model, 
                                         PN_P_picks_label, 
                                         PN_stats_dict_P)
         # S
-        (PN_S_picks_model, PN_S_widths_model) = EV.extract_picks(PN_pred[1], 
-                                                              smooth=True,
-                                                              thr=PICKTHRESHOLD_S)  
-        (PN_S_picks_label, PN_S_widths_label) = EV.extract_picks(PN_sample["y"][1], 
-                                                              smooth=True,
-                                                              thr=PICKTHRESHOLD_S)
+        (PN_S_picks_model, PN_S_widths_model) = EV.extract_picks(
+                                                        PN_pred[1],
+                                                        smooth=True,
+                                                        thr=args.pickthreshold_s)
+        (PN_S_picks_label, PN_S_widths_label) = EV.extract_picks(
+                                                        PN_sample["y"][1],
+                                                        smooth=True,
+                                                        thr=args.pickthreshold_s)
+
         (PN_stats_dict_S, PN_residual_TP_S) = EV.compare_picks(
                                         PN_S_picks_model, 
                                         PN_S_picks_label,
@@ -269,9 +276,10 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in  do_stats_on:
         pn_p_pick_residuals.extend(PN_residual_TP_P)
         pn_s_pick_residuals.extend(PN_residual_TP_S)
 
+        # ------------------------------------------------------------
+        # ----------------- PLOTS
 
-        # ----------------- Do PLOTS
-        if PLOTS and (figureidx+1) <= NPLOTS:
+        if (figureidx+1) <= args.nplots:
             fig = EV.create_AL_plots(
                     PN_sample["X"],
                     PN_sample["y"],
@@ -286,9 +294,8 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in  do_stats_on:
                     DKPN_S_picks_model,  # The DKPN model picks IDX
                     save_path=str(
                         STORE_DIR_RESULTS / ("Prediction_Example_%s_%s_%d.pdf" % (
-                                           DKPN_gen_name, PN_gen_name, figureidx)) ))
-            # fig.show()
-            plt.show()
+                                           DKPN_gen_name, PN_gen_name, figureidx))
+                                ))
         #
         figureidx += 1
     
@@ -304,7 +311,7 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in  do_stats_on:
     (DKPN_S_f1, DKPN_S_precision, DKPN_S_recall) = EV.calculate_scores(DKPN_stats_dict_S)
 
     with open(str(STORE_DIR_RESULTS / ("SCORES_%s.txt" % DKPN_gen_name)), "w") as OUT:
-        OUT.write(("samples:  %d"+os.linesep*2) % TEST_SAMPLES)
+        OUT.write(("samples:  %d"+os.linesep*2) % args.test_samples)
         for vv, kk in DKPN_stats_dict_P.items():
             OUT.write(("%5s:  %7d"+os.linesep) % (vv, kk))
         OUT.write(os.linesep)
@@ -321,7 +328,7 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in  do_stats_on:
 
     # CREATE dictionary to disk
     res_dict = {}
-    res_dict['samples'] = TEST_SAMPLES
+    res_dict['samples'] = args.test_samples
     #
     res_dict.update({"P_"+kk: vv for kk, vv in DKPN_stats_dict_P.items()})
     res_dict["P_f1"] = DKPN_P_f1
@@ -343,7 +350,7 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in  do_stats_on:
     (PN_S_f1, PN_S_precision, PN_S_recall) = EV.calculate_scores(PN_stats_dict_S)
 
     with open(str(STORE_DIR_RESULTS / ("SCORES_%s.txt" % PN_gen_name)), "w") as OUT:
-        OUT.write(("samples:  %d"+os.linesep*2) % TEST_SAMPLES)
+        OUT.write(("samples:  %d"+os.linesep*2) % args.test_samples)
         for vv, kk in PN_stats_dict_P.items():
             OUT.write(("%5s:  %7d"+os.linesep) % (vv, kk))
         OUT.write(os.linesep)
@@ -360,7 +367,7 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in  do_stats_on:
 
     # CREATE dictionary to disk
     res_dict = {}
-    res_dict['samples'] = TEST_SAMPLES
+    res_dict['samples'] = args.test_samples
     #
     res_dict.update({"P_"+kk: vv for kk, vv in PN_stats_dict_P.items()})
     res_dict["P_f1"] = PN_P_f1
@@ -376,31 +383,8 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in  do_stats_on:
     with open(str(STORE_DIR_RESULTS / 'results_PN.pickle'), 'wb') as file:
         pickle.dump(res_dict, file)
 
-
     # =============================================================================
     fig = EV.create_residuals_plot_compare(dkpn_p_pick_residuals, dkpn_s_pick_residuals, 
                                            pn_p_pick_residuals, pn_s_pick_residuals, 
                                            binwidth=0.1,
-                                           save_path=str(STORE_DIR_RESULTS / "RESIDUALS_P_S_comparison_DKPN_PN.pdf"))
-    fig.show()
-
-
-# In[7]:
-
-
-# Load the dictionary from disk
-with open(str(STORE_DIR_RESULTS / 'results_DKPN.pickle'), 'rb') as file:
-    loaded_data = pickle.load(file)
-
-
-# In[8]:
-
-
-loaded_data
-
-
-# In[ ]:
-
-
-
-
+                                           save_path=str(STORE_DIR_RESULTS / "Residuals_P_S_comparison_DKPN_PN.pdf"))

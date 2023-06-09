@@ -1,14 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
-
-# # ReTrain DKPN
-# 
-# Retrain  DKPN as in the paper. Following the up-to-date _SeisBench_ notebook
-# 
-# --------------------------------------------------------------------
-
-# In[1]:
-
 
 import os
 import argparse
@@ -42,7 +32,7 @@ parser.add_argument('-o', '--store_folder', type=str, default='trained_model', h
 #
 parser.add_argument('-e', '--epochs', type=int, default=25, help='Num. Epochs for training')
 parser.add_argument('-l', '--learning_rate', type=float, default=1e-3, help='Learning Rate for training')
-parser.add_argument('-b', '--batch_size', type=float, default=32, help='Batch-Size for training')
+parser.add_argument('-b', '--batch_size', type=int, default=32, help='Batch-Size for training')
 #
 args = parser.parse_args()
 
@@ -84,7 +74,7 @@ MODEL_NAME = "DKPN_TrainDataSet_%s_Size_%s_Rnd_%d_Epochs_%d_LR_%06.4f_Batch_%d" 
 
 STORE_DIR_MODEL = Path(MODEL_NAME)
 if not STORE_DIR_MODEL.is_dir():
-    STORE_DIR_MODEL.mkdir()
+    STORE_DIR_MODEL.mkdir(parents=True, exist_ok=True)
 
 
 # -----------------------------------
