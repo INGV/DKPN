@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser(description=(
 parser.add_argument('-d', '--dataset_name', type=str, default='ETHZ', help='Dataset name')
 parser.add_argument('-s', '--dataset_size', type=str, default='Nano', help='Dataset size')
 parser.add_argument('-r', '--random_seed', type=int, default=42, help='Random seed')
-parser.add_argument('-o', '--store_folder', type=str, default='trained_model', help='Store folder')
+parser.add_argument('-o', '--store_folder', type=str, default=None, help='Store folder')
 #
 parser.add_argument('-e', '--epochs', type=int, default=25, help='Num. Epochs for training')
 parser.add_argument('-l', '--learning_rate', type=float, default=1e-3, help='Learning Rate for training')
@@ -72,7 +72,11 @@ print(" TEST samples %s:  %d" % (args.dataset_name, len(test)))
 MODEL_NAME = "DKPN_TrainDataSet_%s_Size_%s_Rnd_%d_Epochs_%d_LR_%06.4f_Batch_%d" % (
                     args.dataset_name, args.dataset_size, args.random_seed, args.epochs, args.learning_rate, args.batch_size)
 
-STORE_DIR_MODEL = Path(MODEL_NAME)
+if not args.store_folder:
+    STORE_DIR_MODEL = Path(MODEL_NAME)
+else:
+    STORE_DIR_MODEL = Path(args.store_folder)
+#
 if not STORE_DIR_MODEL.is_dir():
     STORE_DIR_MODEL.mkdir(parents=True, exist_ok=True)
 
