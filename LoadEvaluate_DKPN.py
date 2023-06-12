@@ -359,14 +359,14 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
     with open(str(STORE_DIR_RESULTS / ("SCORES_%s.txt" % PN_gen_name)), "w") as OUT:
         OUT.write(("samples:  %d"+os.linesep*2) % args.test_samples)
         for vv, kk in PN_stats_dict_P.items():
-            OUT.write(("%5s:  %7d"+os.linesep) % (vv, kk))
+            OUT.write(("P_%6s:  %7d"+os.linesep) % (vv, kk))
         OUT.write(os.linesep)
         OUT.write(("P_f1:         %4.2f"+os.linesep) % PN_P_f1)
         OUT.write(("P_precision:  %4.2f"+os.linesep) % PN_P_precision)
         OUT.write(("P_recall:     %4.2f"+os.linesep*2) % PN_P_recall)
         #
         for vv, kk in PN_stats_dict_S.items():
-            OUT.write(("%5s:  %7d"+os.linesep) % (vv, kk))
+            OUT.write(("S_%6s:  %7d"+os.linesep) % (vv, kk))
         OUT.write(os.linesep)
         OUT.write(("S_f1:         %4.2f"+os.linesep) % PN_S_f1)
         OUT.write(("S_precision:  %4.2f"+os.linesep) % PN_S_precision)
@@ -393,7 +393,7 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
     # =============================================================================
     fig = EV.create_residuals_plot_compare(dkpn_p_pick_residuals, dkpn_s_pick_residuals, 
                                            pn_p_pick_residuals, pn_s_pick_residuals, 
-                                           binwidth=0.1,
+                                           binwidth=0.025,
                                            save_path=str(STORE_DIR_RESULTS / "Residuals_P_S_comparison_DKPN_PN.pdf"))
 
 # Store PARAMETER
