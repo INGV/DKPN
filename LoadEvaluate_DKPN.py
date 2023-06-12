@@ -5,7 +5,6 @@ import pickle
 import argparse
 import numpy as np
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 from pathlib import Path
 
 import obspy
@@ -42,6 +41,8 @@ parser.add_argument('-k', '--dkpn_model_name', type=str, required=True, help='DK
 parser.add_argument('-p', '--pn_model_name', type=str, required=True, help='PN model path')
 parser.add_argument('-x', '--pickthreshold_p', type=float, default=0.2, help='Pick threshold P')
 parser.add_argument('-y', '--pickthreshold_s', type=float, default=0.2, help='Pick threshold S')
+parser.add_argument('-a', '--truepositive_p', type=int, default=10, help='Delta for declare True Positive P (samples)')
+parser.add_argument('-b', '--truepositive_s', type=int, default=20, help='Delta for declare True Positive S (samples)')
 parser.add_argument('-n', '--test_samples', type=int, default=5000, help='Number of test samples')
 parser.add_argument('-f', '--nplots', type=int, default=10, help='Number of examples plots')
 #
@@ -58,6 +59,8 @@ print(f"STORE_FOLDER: {args.store_folder}")
 print("")
 print(f"PICK_THR_P: {args.pickthreshold_p}")
 print(f"PICK_THR_S: {args.pickthreshold_s}")
+print(f"DELTA_TP_P: {args.truepositive_p}")
+print(f"DELTA_TP_S: {args.truepositive_s}")
 print(f"NPLOTS: {args.nplots}")
 print(f"NSAMPLES: {args.test_samples}")
 
@@ -222,7 +225,8 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         (DKPN_stats_dict_P, DKPN_residual_TP_P) = EV.compare_picks(
                                           DKPN_P_picks_model, 
                                           DKPN_P_picks_label, 
-                                          DKPN_stats_dict_P)
+                                          DKPN_stats_dict_P,
+                                          thr=args.truepositive_p)
         # S
         (DKPN_S_picks_model, DKPN_S_widths_model) = EV.extract_picks(
                                                         DKPN_pred[1],
@@ -236,7 +240,8 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         (DKPN_stats_dict_S, DKPN_residual_TP_S) = EV.compare_picks(
                                           DKPN_S_picks_model, 
                                           DKPN_S_picks_label, 
-                                          DKPN_stats_dict_S)
+                                          DKPN_stats_dict_S,
+                                          thr=args.truepositive_s)
 
         dkpn_p_pick_residuals.extend(DKPN_residual_TP_P)
         dkpn_s_pick_residuals.extend(DKPN_residual_TP_S)
@@ -257,7 +262,8 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         (PN_stats_dict_P, PN_residual_TP_P) = EV.compare_picks(
                                         PN_P_picks_model, 
                                         PN_P_picks_label, 
-                                        PN_stats_dict_P)
+                                        PN_stats_dict_P,
+                                        thr=args.truepositive_p)
         # S
         (PN_S_picks_model, PN_S_widths_model) = EV.extract_picks(
                                                         PN_pred[1],
@@ -271,7 +277,8 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         (PN_stats_dict_S, PN_residual_TP_S) = EV.compare_picks(
                                         PN_S_picks_model, 
                                         PN_S_picks_label,
-                                        PN_stats_dict_S)
+                                        PN_stats_dict_S,
+                                        thr=args.truepositive_s)
 
         pn_p_pick_residuals.extend(PN_residual_TP_P)
         pn_s_pick_residuals.extend(PN_residual_TP_S)
@@ -388,3 +395,7 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
                                            pn_p_pick_residuals, pn_s_pick_residuals, 
                                            binwidth=0.1,
                                            save_path=str(STORE_DIR_RESULTS / "Residuals_P_S_comparison_DKPN_PN.pdf"))
+
+# Store PARAMETER
+with open(str(STORE_DIR_RESULTS / "CALL_ARGS.py"), "w") as OUT:
+    OUT.write("ARGS=%s" % args)

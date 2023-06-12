@@ -1,15 +1,16 @@
 #!/bin/bash
 
-./ReTrain_DKPN.py -d INSTANCE -s NANO -r 42 -e 35 -o DKPN_TrainDataSet_INSTANCE_Size_NANO_Rnd_42_Epochs_35_LR_0.0010_Batch_32
+SIZEME="NANO3"
 
-./ReTrain_PN.py -d INSTANCE -s NANO -r 42 -e 35 -o PN_TrainDataSet_INSTANCE_Size_NANO_Rnd_42_Epochs_35_LR_0.0010_Batch_32
+./ReTrain_DKPN.py -d ETHZ -s ${SIZEME} -r 42 \
+                  -e 50 -b 32 -l 0.0001 \
+                  -o DKPN_TrainDataSet_ETHZ_Size_${SIZEME}_Rnd_42_Epochs_50_LR_0.0001_Batch_32
 
-# Indomain
-./LoadEvaluate_DKPN.py -k DKPN_TrainDataSet_INSTANCE_Size_NANO_Rnd_42_Epochs_35_LR_0.0010_Batch_32 \
-                       -p PN_TrainDataSet_INSTANCE_Size_NANO_Rnd_42_Epochs_35_LR_0.0010_Batch_32 \
-                       -d INSTANCE -s NANO -x 0.2 -y 0.2 -n 5000 -f 10 -o trained_results_INSTANCE
+./ReTrain_PN.py -d ETHZ -s NANO3 -r 42 \
+                -e 50 -b 32 -l 0.0001 \
+                -o PN_TrainDataSet_ETHZ_Size_${SIZEME}_Rnd_42_Epochs_50_LR_0.0001_Batch_32
 
-# CrossDomain
-./LoadEvaluate_DKPN.py -k DKPN_TrainDataSet_INSTANCE_Size_NANO_Rnd_42_Epochs_35_LR_0.0010_Batch_32 \
-                       -p PN_TrainDataSet_INSTANCE_Size_NANO_Rnd_42_Epochs_35_LR_0.0010_Batch_32 \
-                       -d ETHZ -s NANO -x 0.2 -y 0.2 -n 5000 -f 10 -o trained_results_ETHZ
+./LoadEvaluate_DKPN.py -k DKPN_TrainDataSet_ETHZ_Size_${SIZEME}_Rnd_42_Epochs_50_LR_0.0001_Batch_32 \
+                       -p PN_TrainDataSet_ETHZ_Size_${SIZEME}_Rnd_42_Epochs_50_LR_0.0001_Batch_32 \
+                       -d ETHZ -s ${SIZEME} -x 0.2 -y 0.2 -n 5000 -f 10 -o Results_ETHZ_${SIZEME}
+

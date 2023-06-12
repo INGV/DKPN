@@ -176,7 +176,7 @@ def create_residuals_plot_compare(resP_dkpn, resS_dkpn, resP_pn, resS_pn,
 
         # Set labels and title
         ax.set_xlabel('residuals (s)')
-        ax.set_xlim([-1, 1])
+        ax.set_xlim([-0.5, 0.5])
         ax.set_ylabel('count')
         ax.set_title(title)
         ax.legend()
