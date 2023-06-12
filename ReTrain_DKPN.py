@@ -50,23 +50,22 @@ print(f"BATCH_SIZE: {args.batch_size}")
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 
-
 # ### SELECT DATASET and SIZE
 #
 # Here you can decide to load the same dataset for _In-Domain_ tests, or a different one for _Cross-Domain_ testing.
 
-# In[3]:
+if args.dataset_name.lower() != "ethz":
+    (dataset_train, dataset_test) = dktrain.select_database_and_size(
+                                        args.dataset_name, args.dataset_name, args.dataset_size, RANDOM_SEED=args.random_seed)
+    train = dataset_train.train()
+    dev = dataset_train.dev()
+    test = dataset_test.test()
 
-
-(dataset_train, dataset_test) = dktrain.select_database_and_size(
-                                    args.dataset_name, args.dataset_name, args.dataset_size, RANDOM_SEED=args.random_seed)
-train = dataset_train.train()
-dev = dataset_train.dev()
-test = dataset_test.test()
-
-print("TRAIN samples %s:  %d" % (args.dataset_name, len(train)))
-print("  DEV samples %s:  %d" % (args.dataset_name, len(dev)))
-print(" TEST samples %s:  %d" % (args.dataset_name, len(test)))
+else:
+    dataset_train = dktrain.select_database_and_size_ETHZ(
+                                                args.dataset_size,
+                                                RANDOM_SEED=args.random_seed)
+    train, dev, test = dataset_train.train_dev_test()
 
 
 MODEL_NAME = "DKPN_TrainDataSet_%s_Size_%s_Rnd_%d_Epochs_%d_LR_%06.4f_Batch_%d" % (
@@ -83,12 +82,7 @@ if not STORE_DIR_MODEL.is_dir():
 
 # -----------------------------------
 # 
-# # INITIALIZE DKPN
-# 
-# In this slot we initialize the picker and prepare 
-
-# In[4]:
-
+# INITIALIZE DKPN
 
 mydkpn = dkcore.DKPN()  # Instantiate
 mydkpn.cuda();
@@ -98,15 +92,12 @@ pprint(mydkpn.get_defaults())   # This are the parameter that will be used!
 print("")
 
 
-# In[5]:
-
-
 TRAIN_CLASS = dktrain.TrainHelp_DomainKnowledgePhaseNet(
                 mydkpn,  # It will contains the default args for StreamCF calculations!!!
                 train,
                 dev,
                 test,
-                augmentations_par = {
+                augmentations_par={
                     "amp_norm_type": "std",
                     "window_strategy": "move",  # "pad"
                     "final_windowlength": 3001,
@@ -146,9 +137,9 @@ with open(str(STORE_DIR_MODEL / "TRAIN_TEST_loss.csv"), "w") as OUT:
     for xx, (trn, tst) in enumerate(zip(train_loss_epochs, dev_loss_epochs)):
         OUT.write(("%d, %.4f, %.4f"+os.linesep) % (xx, trn, tst))
 
-
-# In[ ]:
-
+# Store PARAMETER
+with open(str(STORE_DIR_MODEL / "TRAIN_ARGS.py"), "w") as OUT:
+    OUT.write("TRAINARGS=%s" % args)
 
 fig = plt.figure(figsize=(10, 7))
 plt.plot(train_loss_epochs, label="TRAIN_Loss", color="red", lw=2)

@@ -18,6 +18,35 @@ from dkpn.core import PreProc
 # ==================================================================
 
 
+def select_database_and_size_ETHZ(dataset_size, RANDOM_SEED=42):
+
+    dataset_train = sbd.ETHZ(sampling_rate=100, cache="trace")
+
+    if dataset_size.lower() == "nano3":
+        dataset_train._set_splits_random_sampling(ratios=(0.021875, 0.0021875, 0.0), random_seed=RANDOM_SEED)  # NANO3 -> 803 80
+
+    elif dataset_size.lower() == "nano2":
+        dataset_train._set_splits_random_sampling(ratios=(0.04375, 0.004375, 0.0), random_seed=RANDOM_SEED)  # NANO2 -> 1607 160
+
+    elif dataset_size.lower() == "nano1":
+
+        dataset_train._set_splits_random_sampling(ratios=(0.0875, 0.00875, 0.0), random_seed=RANDOM_SEED)  # NANO1 -> 3215 321
+
+    elif dataset_size.lower() == "nano":
+        dataset_train._set_splits_random_sampling(ratios=(0.175, 0.0175, 0.0), random_seed=RANDOM_SEED)  # NANO -> 6430 643
+
+    elif dataset_size.lower() == "micro":
+        dataset_train._set_splits_random_sampling(ratios=(0.35, 0.035, 0.0), random_seed=RANDOM_SEED)  # MICRO -> 12860 1286
+
+    elif dataset_size.lower() == "tiny":
+        dataset_train._set_splits_random_sampling(ratios=(0.7, 0.07, 0.0), random_seed=RANDOM_SEED)  # TINY -> 25720 2572
+
+    else:
+        raise ValueError("Not a valid DATASET SIZE!")
+
+    return dataset_train
+
+
 def select_database_and_size(train_dev_name, test_name, dataset_size, RANDOM_SEED=42):
     """ Big Switch for selection of dataset and sample numbers """
     print("Selecting DATASET TRAIN/DEV: %s" % train_dev_name.upper())
