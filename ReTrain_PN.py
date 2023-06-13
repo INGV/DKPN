@@ -48,32 +48,32 @@ print(f"BATCH_SIZE: {args.batch_size}")
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
+# SELECT DATASET and SIZE
 
-
-# ### SELECT DATASET and SIZE
-# 
-# Here you can decide to load the same dataset for _In-Domain_ tests, or a different one for _Cross-Domain_ testing.
-
-
-if args.dataset_name.lower() != "ethz":
-    (dataset_train, dataset_test) = dktrain.select_database_and_size(
-                                        args.dataset_name, args.dataset_name, args.dataset_size, RANDOM_SEED=args.random_seed)
-    train = dataset_train.train()
-    dev = dataset_train.dev()
-    test = dataset_test.test()
-
-else:
+if args.dataset_name.lower() == "ethz":
     dataset_train = dktrain.select_database_and_size_ETHZ(
                                                 args.dataset_size,
                                                 RANDOM_SEED=args.random_seed)
-    train, dev, test = dataset_train.train_dev_test()
+else:
+    dataset_train = dktrain.select_database_and_size(
+                                args.dataset_name, args.dataset_size,
+                                RANDOM_SEED=args.random_seed)
+
+
+# === FILTER+SPLIT
+if args.dataset_name.lower() == "instance":
+    dataset_train = dktrain.__filter_sb_dataset__(dataset_train)
+
+train, dev, test = dataset_train.train_dev_test()
 
 print("TRAIN samples %s:  %d" % (args.dataset_name, len(train)))
 print("  DEV samples %s:  %d" % (args.dataset_name, len(dev)))
 print(" TEST samples %s:  %d" % (args.dataset_name, len(test)))
 
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
-MODEL_NAME = "PN_TrainDataSet_%s_Size_%s_Rnd_%d_Epochs_%d_LR_%06.4f_Batch_%d" % (
+MODEL_NAME = "PN_TrainDataset_%s_Size_%s_Rnd_%d_Epochs_%d_LR_%06.4f_Batch_%d" % (
                     args.dataset_name, args.dataset_size, args.random_seed, args.epochs, args.learning_rate, args.batch_size)
 
 if not args.store_folder:
@@ -85,19 +85,12 @@ if not STORE_DIR_MODEL.is_dir():
     STORE_DIR_MODEL.mkdir(parents=True, exist_ok=True)
 
 
-# -----------------------------------
-# 
-# # INITIALIZE PN
-# 
-# In this slot we initialize the picker and prepare 
-
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# INITIALIZE PN
 
 mypn = sbm.PhaseNet()
 mypn.cuda();
-
-
-# In[5]:
-
 
 TRAIN_CLASS = dktrain.TrainHelp_PhaseNet(
                 mypn,  # It will contains the default args for StreamCF calculations!!!
@@ -149,6 +142,15 @@ with open(str(STORE_DIR_MODEL / "TRAIN_TEST_loss.csv"), "w") as OUT:
 # Store PARAMETER
 with open(str(STORE_DIR_MODEL / "TRAIN_ARGS.py"), "w") as OUT:
     OUT.write("TRAINARGS=%s" % args)
+
+# Store DATABASE INFO
+with open(str(STORE_DIR_MODEL / "TRAIN_DATA_INFO.txt"), "w") as OUT:
+    OUT.write(("TRAIN samples %s:  %d"+os.linesep) % (args.dataset_name,
+                                                      len(train)))
+    OUT.write(("  DEV samples %s:  %d"+os.linesep) % (args.dataset_name,
+                                                      len(dev)))
+    OUT.write((" TEST samples %s:  %d"+os.linesep) % (args.dataset_name,
+                                                      len(test)))
 
 fig = plt.figure(figsize=(10, 7))
 plt.plot(train_loss_epochs, label="TRAIN_Loss", color="red", lw=2)

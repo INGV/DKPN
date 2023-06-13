@@ -1,7 +1,5 @@
-from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.stats as stats
 from scipy.signal import find_peaks, peak_widths
 
 

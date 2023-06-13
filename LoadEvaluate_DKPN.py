@@ -83,21 +83,28 @@ if not STORE_DIR_RESULTS.is_dir():
 # In[3]:
 
 
-(dataset_train, dataset_test) = dktrain.select_database_and_size(
-                                    args.dataset_name, args.dataset_name, args.dataset_size, RANDOM_SEED=args.random_seed)
-train = dataset_train.train()
-dev = dataset_train.dev()
-test = dataset_test.test()
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# SELECT DATASET and SIZE
+
+dataset_train = dktrain.select_database_and_size(
+                            args.dataset_name, args.dataset_size,
+                            RANDOM_SEED=args.random_seed)
+
+
+# === FILTER+SPLIT
+if args.dataset_name.lower() == "instance":
+    dataset_train = dktrain.__filter_sb_dataset__(dataset_train)
+
+train, dev, test = dataset_train.train_dev_test()
 
 print("TRAIN samples %s:  %d" % (args.dataset_name, len(train)))
 print("  DEV samples %s:  %d" % (args.dataset_name, len(dev)))
 print(" TEST samples %s:  %d" % (args.dataset_name, len(test)))
 
-
-# ### INITIALIZE PICKERS
-
-# =================================================================
-# =================================================================
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 print("Loading DKPN ... %s" % Path(args.dkpn_model_name).name)
 mydkpn = dkcore.DKPN()
@@ -128,9 +135,7 @@ mypn.eval();
 # 
 # The functions and indexes are contained in `dkpn.eval_utils.py`.
 # For consistency, we 
-# 
-# **NB: we need to set the flag `"for_what": "TEST"` !!**
-
+#
 # In[11]:
 
 
@@ -184,19 +189,19 @@ pn_p_pick_residuals, pn_s_pick_residuals = [], []
 
 
 for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
-    
+
     print("Working with:  %s + %s" % (DKPN_gen_name, PN_gen_name))
     DKPN_stats_dict_P, DKPN_stats_dict_S = EV.__reset_stats_dict__(), EV.__reset_stats_dict__()
     PN_stats_dict_P, PN_stats_dict_S = EV.__reset_stats_dict__(), EV.__reset_stats_dict__()
 
     figureidx = 0
-    
+
     for xx in tqdm(range(args.test_samples)):
 
         DKPN_sample = DKPN_gen[rnidx[xx]]
-        # Create equal window for PN (stored in Xorig of DKPN, but we must remove the 400 sample stab.)
+        # Create equal window for PN (stored in Xorig of DKPN, but we must remove the fp_stab samples)
         PN_sample = {}
-        PN_sample["X"] = DKPN_sample["Xorig"][:, 400:]  # <-- To remove the FP stabilization
+        PN_sample["X"] = DKPN_sample["Xorig"][:, mydkpn.default_args["fp_stabilization"]*mydkpn.sampling_rate:]
         PN_sample["y"] = DKPN_sample["y"]
 
         # ----------------- Do PREDICTIONS
@@ -320,14 +325,14 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
     with open(str(STORE_DIR_RESULTS / ("SCORES_%s.txt" % DKPN_gen_name)), "w") as OUT:
         OUT.write(("samples:  %d"+os.linesep*2) % args.test_samples)
         for vv, kk in DKPN_stats_dict_P.items():
-            OUT.write(("%5s:  %7d"+os.linesep) % (vv, kk))
+            OUT.write(("%7s:  %7d"+os.linesep) % ("P_"+vv, kk))
         OUT.write(os.linesep)
         OUT.write(("P_f1:         %4.2f"+os.linesep) % DKPN_P_f1)
         OUT.write(("P_precision:  %4.2f"+os.linesep) % DKPN_P_precision)
         OUT.write(("P_recall:     %4.2f"+os.linesep*2) % DKPN_P_recall)
         #
         for vv, kk in DKPN_stats_dict_S.items():
-            OUT.write(("%5s:  %7d"+os.linesep) % (vv, kk))
+            OUT.write(("%7s:  %7d"+os.linesep) % ("S_"+vv, kk))
         OUT.write(os.linesep)
         OUT.write(("S_f1:         %4.2f"+os.linesep) % DKPN_S_f1)
         OUT.write(("S_precision:  %4.2f"+os.linesep) % DKPN_S_precision)
@@ -359,14 +364,14 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
     with open(str(STORE_DIR_RESULTS / ("SCORES_%s.txt" % PN_gen_name)), "w") as OUT:
         OUT.write(("samples:  %d"+os.linesep*2) % args.test_samples)
         for vv, kk in PN_stats_dict_P.items():
-            OUT.write(("P_%6s:  %7d"+os.linesep) % (vv, kk))
+            OUT.write(("%7s:  %7d"+os.linesep) % ("P_"+vv, kk))
         OUT.write(os.linesep)
         OUT.write(("P_f1:         %4.2f"+os.linesep) % PN_P_f1)
         OUT.write(("P_precision:  %4.2f"+os.linesep) % PN_P_precision)
         OUT.write(("P_recall:     %4.2f"+os.linesep*2) % PN_P_recall)
         #
         for vv, kk in PN_stats_dict_S.items():
-            OUT.write(("S_%6s:  %7d"+os.linesep) % (vv, kk))
+            OUT.write(("%7s:  %7d"+os.linesep) % ("S_"+vv, kk))
         OUT.write(os.linesep)
         OUT.write(("S_f1:         %4.2f"+os.linesep) % PN_S_f1)
         OUT.write(("S_precision:  %4.2f"+os.linesep) % PN_S_precision)

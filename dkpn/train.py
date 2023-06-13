@@ -7,8 +7,10 @@ import torch
 from torch.utils.data import DataLoader
 
 from pathlib import Path
-import seisbench.generate as sbg
+
+import seisbench as sb
 import seisbench.data as sbd
+import seisbench.generate as sbg
 
 from dkpn.core import PreProc
 
@@ -18,101 +20,120 @@ from dkpn.core import PreProc
 # ==================================================================
 
 
-def select_database_and_size_ETHZ(dataset_size, RANDOM_SEED=42):
+# def select_database_and_size_ETHZ(dataset_size, RANDOM_SEED=42, cache_dir=None):
 
-    dataset_train = sbd.ETHZ(sampling_rate=100, cache="trace")
+#     if cache_dir and isinstance(cache_dir, str):
+#         print("Changing SB CACHE-DIR to --> %s" % cache_dir)
+#         original_cache = sb.cache_root
+#         sb.cache_root = cache_dir
+#     #
+#     dataset_train = sbd.ETHZ(sampling_rate=100, cache="trace")
 
-    if dataset_size.lower() == "nano3":  # NANO3 -> 803 80
-        dataset_train._set_splits_random_sampling(ratios=(0.021875, 0.0021875, 0.0), random_seed=RANDOM_SEED)
+#     if dataset_size.lower() == "nano3":  # NANO3 -> 803 80
+#         dataset_train._set_splits_random_sampling(ratios=(0.021875, 0.0021875, 0.0), random_seed=RANDOM_SEED)
 
-    elif dataset_size.lower() == "nano2":  # NANO2 -> 1607 160
-        dataset_train._set_splits_random_sampling(ratios=(0.04375, 0.004375, 0.0), random_seed=RANDOM_SEED)
+#     elif dataset_size.lower() == "nano2":  # NANO2 -> 1607 160
+#         dataset_train._set_splits_random_sampling(ratios=(0.04375, 0.004375, 0.0), random_seed=RANDOM_SEED)
 
-    elif dataset_size.lower() == "nano1":  # NANO1 -> 3215 321
-        dataset_train._set_splits_random_sampling(ratios=(0.0875, 0.00875, 0.0), random_seed=RANDOM_SEED)
+#     elif dataset_size.lower() == "nano1":  # NANO1 -> 3215 321
+#         dataset_train._set_splits_random_sampling(ratios=(0.0875, 0.00875, 0.0), random_seed=RANDOM_SEED)
 
-    elif dataset_size.lower() == "nano":  # NANO -> 6430 643
-        dataset_train._set_splits_random_sampling(ratios=(0.175, 0.0175, 0.0), random_seed=RANDOM_SEED)
+#     elif dataset_size.lower() == "nano":  # NANO -> 6430 643
+#         dataset_train._set_splits_random_sampling(ratios=(0.175, 0.0175, 0.0), random_seed=RANDOM_SEED)
 
-    elif dataset_size.lower() == "micro":  # MICRO -> 12860 1286
-        dataset_train._set_splits_random_sampling(ratios=(0.35, 0.035, 0.0), random_seed=RANDOM_SEED)
+#     elif dataset_size.lower() == "micro":  # MICRO -> 12860 1286
+#         dataset_train._set_splits_random_sampling(ratios=(0.35, 0.035, 0.0), random_seed=RANDOM_SEED)
 
-    elif dataset_size.lower() == "tiny":  # TINY -> 25720 2572
-        dataset_train._set_splits_random_sampling(ratios=(0.7, 0.07, 0.0), random_seed=RANDOM_SEED)
+#     elif dataset_size.lower() == "tiny":  # TINY -> 25720 2572
+#         dataset_train._set_splits_random_sampling(ratios=(0.7, 0.07, 0.0), random_seed=RANDOM_SEED)
 
-    else:
-        raise ValueError("Not a valid DATASET SIZE!")
+#     else:
+#         raise ValueError("Not a valid DATASET SIZE!")
 
-    return dataset_train
+#     if cache_dir and isinstance(cache_dir, str):
+#         print("Restoring original SB CACHE-DIR ... %s" % original_cache)
+#         sb.cache_root = original_cache
+
+#     return dataset_train
 
 
-def select_database_and_size(train_dev_name, test_name, dataset_size, RANDOM_SEED=42):
+def __filter_sb_dataset__(indata):
+    print("... Filtering TRAIN-DATASET")
+    indata.filter(indata.metadata["path_ep_distance_km"] <= 100.0, inplace=True)
+    indata.filter(indata.metadata["station_channels"] == "HH", inplace=True)
+
+    # P and S
+    indata.filter(np.logical_not(np.logical_or(   # not (no P or no S)
+        np.isnan(indata.metadata["trace_P_arrival_sample"]),
+        np.isnan(indata.metadata["trace_S_arrival_sample"]))
+    ), inplace=True)
+
+    # P-S < 3001 (both P and S inside the 30 second window)
+    indata.filter((indata.metadata["trace_S_arrival_sample"] -
+                   indata.metadata["trace_P_arrival_sample"] < 3000),
+                  inplace=True)
+
+    return indata
+
+
+def select_database_and_size(dataset_name, dataset_size, RANDOM_SEED=42):
     """ Big Switch for selection of dataset and sample numbers """
-    print("Selecting DATASET TRAIN/DEV: %s" % train_dev_name.upper())
-    print("Selecting DATASET TEST:      %s" % test_name.upper())
-    print("Selecting DATASET SIZE:      %s" % dataset_size.upper())
+
+    print("Selecting DATASET from:  %s" % sb.cache_root)
+    print("Selecting DATASET NAME:  %s" % dataset_name.upper())
+    print("Selecting DATASET SIZE:  %s" % dataset_size.upper())
 
     # ===========> DATASET
-    # TRAIN
-    if train_dev_name.upper() == "INSTANCE":
-        dataset_train = sbd.InstanceCounts(sampling_rate=100, cache="trace")
-    elif train_dev_name.upper() == "SCEDC":
-        dataset_train = sbd.SCEDC(sampling_rate=100, cache="trace")
-    elif train_dev_name.upper() == "ETHZ":
-        dataset_train = sbd.ETHZ(sampling_rate=100, cache="trace")
-    else:
-        raise ValueError("Not a valid DATASET NAME!")
-    # TEST
-    if test_name.upper() == "INSTANCE":
-        dataset_test = sbd.InstanceCounts(sampling_rate=100, cache="trace")
-    elif test_name.upper() == "SCEDC":
-        dataset_test = sbd.SCEDC(sampling_rate=100, cache="trace")
-    elif test_name.upper() == "ETHZ":
-        dataset_test = sbd.ETHZ(sampling_rate=100, cache="trace")
+    if dataset_name.upper() == "INSTANCE":
+        mydataset = sbd.InstanceCounts(sampling_rate=100, cache="trace")
+    elif dataset_name.upper() == "SCEDC":
+        mydataset = sbd.SCEDC(sampling_rate=100, cache="trace")
+    elif dataset_name.upper() == "ETHZ":
+        mydataset = sbd.ETHZ(sampling_rate=100, cache="trace")
     else:
         raise ValueError("Not a valid DATASET NAME!")
 
     # ===========> SIZE
     if dataset_size.lower() == "nano3":
-        dataset_train._set_splits_random_sampling(ratios=(0.0025, 0.00025, 0.0), random_seed=RANDOM_SEED)  #TEST
-        dataset_test._set_splits_random_sampling(ratios=(0.0025, 0.00025, 0.0), random_seed=RANDOM_SEED)  #TEST
+        mydataset._set_splits_random_sampling(ratios=(0.0025, 0.00025, 0.0),
+                                              random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "nano2":
-        dataset_train._set_splits_random_sampling(ratios=(0.005, 0.0005, 0.0), random_seed=RANDOM_SEED)  #TEST
-        dataset_test._set_splits_random_sampling(ratios=(0.005, 0.0005, 0.0), random_seed=RANDOM_SEED)  #TEST    
+        mydataset._set_splits_random_sampling(ratios=(0.005, 0.0005, 0.0),
+                                              random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "nano1":
-        dataset_train._set_splits_random_sampling(ratios=(0.01, 0.001, 0.0), random_seed=RANDOM_SEED)  #TEST
-        dataset_test._set_splits_random_sampling(ratios=(0.01, 0.001, 0.0), random_seed=RANDOM_SEED)  #TEST
+        mydataset._set_splits_random_sampling(ratios=(0.01, 0.001, 0.0),
+                                              random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "nano":
-        dataset_train._set_splits_random_sampling(ratios=(0.02, 0.002, 0.0), random_seed=RANDOM_SEED)  #tinyDataset
-        dataset_test._set_splits_random_sampling(ratios=(0.02, 0.002, 0.0), random_seed=RANDOM_SEED)  #tinyDataset
+        mydataset._set_splits_random_sampling(ratios=(0.02, 0.002, 0.0),
+                                              random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "micro":
-        dataset_train._set_splits_random_sampling(ratios=(0.04, 0.004, 0.0), random_seed=RANDOM_SEED)  #tinyDataset
-        dataset_test._set_splits_random_sampling(ratios=(0.04, 0.004, 0.0), random_seed=RANDOM_SEED)  #tinyDataset
+        mydataset._set_splits_random_sampling(ratios=(0.04, 0.004, 0.0),
+                                              random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "tiny":
-        dataset_train._set_splits_random_sampling(ratios=(0.08, 0.008, 0.0), random_seed=RANDOM_SEED)  #smallDataset
-        dataset_test._set_splits_random_sampling(ratios=(0.08, 0.008, 0.0), random_seed=RANDOM_SEED)  #smallDataset
+        mydataset._set_splits_random_sampling(ratios=(0.08, 0.008, 0.0),
+                                              random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "small":
-        dataset_train._set_splits_random_sampling(ratios=(0.2, 0.02, 0.0), random_seed=RANDOM_SEED)  #medDataset
-        dataset_test._set_splits_random_sampling(ratios=(0.2, 0.02, 0.0), random_seed=RANDOM_SEED)  #medDataset
+        mydataset._set_splits_random_sampling(ratios=(0.2, 0.02, 0.0),
+                                              random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "medium":
-        dataset_train._set_splits_random_sampling(ratios=(0.5, 0.05, 0.0), random_seed=RANDOM_SEED)   # largeDataset
-        dataset_test._set_splits_random_sampling(ratios=(0.5, 0.05, 0.0), random_seed=RANDOM_SEED)   # largeDataset
+        mydataset._set_splits_random_sampling(ratios=(0.5, 0.05, 0.0),
+                                              random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "large":
-        dataset_train._set_splits_random_sampling(ratios=(0.8, 0.1, 0.0), random_seed=RANDOM_SEED)   # hugeDataset
-        dataset_test._set_splits_random_sampling(ratios=(0.8, 0.1, 0.0), random_seed=RANDOM_SEED)   # hugeDataset
+        mydataset._set_splits_random_sampling(ratios=(0.8, 0.1, 0.0),
+                                              random_seed=RANDOM_SEED)
 
     else:
         raise ValueError("Not a valid DATASET SIZE!")
 
-    return (dataset_train, dataset_test)
+    return mydataset
 
 
 # ==================================================================

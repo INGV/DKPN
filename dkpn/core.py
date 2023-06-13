@@ -4,20 +4,16 @@
 import json
 
 import numpy as np
-import scipy.signal
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from packaging import version
 
-import seisbench
-from queue import PriorityQueue
-from collections import defaultdict
 from seisbench.models.base import WaveformModel, _cache_migration_v0_v3
 # from .base import WaveformModel, _cache_migration_v0_v3
 
 # ---------  For PreProc
-from obspy.core import Trace, Stream
+from obspy.core import Trace
 import copy
 from obspy.signal.filter import bandpass
 from scipy.signal import lfilter
