@@ -386,6 +386,20 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
     with open(str(STORE_DIR_RESULTS / 'results_PN.pickle'), 'wb') as file:
         pickle.dump(res_dict, file)
 
+    # SAVE RESIDUALS - DKPN
+    with open(str(STORE_DIR_RESULTS / 'DKPN_TP_P_residuals.pickle'), 'wb') as file:
+        pickle.dump(dkpn_p_pick_residuals, file)
+
+    with open(str(STORE_DIR_RESULTS / 'DKPN_TP_S_residuals.pickle'), 'wb') as file:
+        pickle.dump(dkpn_s_pick_residuals, file)
+
+    # SAVE RESIDUALS - PN
+    with open(str(STORE_DIR_RESULTS / 'PN_TP_P_residuals.pickle'), 'wb') as file:
+        pickle.dump(pn_p_pick_residuals, file)
+
+    with open(str(STORE_DIR_RESULTS / 'PN_TP_S_residuals.pickle'), 'wb') as file:
+        pickle.dump(pn_s_pick_residuals, file)
+
     # =============================================================================
     fig = EV.create_residuals_plot_compare(dkpn_p_pick_residuals, dkpn_s_pick_residuals, 
                                            pn_p_pick_residuals, pn_s_pick_residuals, 

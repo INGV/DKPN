@@ -133,6 +133,7 @@ def create_AL_plots(wave3c,
             ax.set_ylim(0, 1)
         
     # STORE+SAVE
+    plt.tight_layout()
     _ = fig.savefig(str(save_path))
     return fig
 
@@ -152,6 +153,7 @@ def create_residuals_plot(resP, resS, binwidth=0.1, save_path="image_residuals.p
         ax.set_title(titles)
 
     # STORE+SAVE
+    plt.tight_layout()
     _ = fig.savefig(str(save_path))
     return fig
 
@@ -162,7 +164,7 @@ def create_residuals_plot_compare(resP_dkpn, resS_dkpn, resP_pn, resS_pn,
     fig = plt.figure(figsize=(12, 3))
     axs = fig.subplots(1, 2, sharex=True)
     fig.suptitle('TRUE-POSITIVE')
-    bin_edges = np.arange(-5.05, 5.05 + binwidth, binwidth)
+    bin_edges = np.arange(-11.05, 11.05 + binwidth, binwidth)
 
     for (ax, data, title) in zip(
                     axs, ((resP_dkpn, resP_pn), (resS_dkpn, resS_pn)), ('P', 'S')):
@@ -180,5 +182,6 @@ def create_residuals_plot_compare(resP_dkpn, resS_dkpn, resP_pn, resS_pn,
         ax.legend()
 
     # STORE+SAVE
+    plt.tight_layout()
     _ = fig.savefig(str(save_path))
     return fig
