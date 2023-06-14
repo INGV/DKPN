@@ -162,7 +162,7 @@ def create_residuals_plot_compare(resP_dkpn, resS_dkpn, resP_pn, resS_pn,
     fig = plt.figure(figsize=(12, 3))
     axs = fig.subplots(1, 2, sharex=True)
     fig.suptitle('TRUE-POSITIVE')
-    bin_edges = np.arange(-11.05, 11.05 + binwidth, binwidth)
+    bin_edges = np.arange(-5.05, 5.05 + binwidth, binwidth)
 
     for (ax, data, title) in zip(
                     axs, ((resP_dkpn, resP_pn), (resS_dkpn, resS_pn)), ('P', 'S')):

@@ -74,28 +74,11 @@ if not STORE_DIR_RESULTS.is_dir():
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
-
-
-# ### SELECT DATASET and SIZE
-#
-# Here you can decide to load the same dataset for _In-Domain_ tests, or a different one for _Cross-Domain_ testing.
-
-# In[3]:
-
-
-# ----------------------------------------------------------------------------
-# ----------------------------------------------------------------------------
-# ----------------------------------------------------------------------------
 # SELECT DATASET and SIZE
 
 dataset_train = dktrain.select_database_and_size(
                             args.dataset_name, args.dataset_size,
                             RANDOM_SEED=args.random_seed)
-
-
-# === FILTER+SPLIT
-if args.dataset_name.lower() == "instance":
-    dataset_train = dktrain.__filter_sb_dataset__(dataset_train)
 
 train, dev, test = dataset_train.train_dev_test()
 
@@ -109,14 +92,15 @@ print(" TEST samples %s:  %d" % (args.dataset_name, len(test)))
 print("Loading DKPN ... %s" % Path(args.dkpn_model_name).name)
 mydkpn = dkcore.DKPN()
 mydkpn.load_state_dict(torch.load(str(DKPN_MODEL_PATH), map_location=torch.device('cpu')))
-mydkpn.cuda();
 mydkpn.eval();
+mydkpn.cuda();
+
 
 print("Loading PN ... %s" % Path(args.pn_model_name).name)
 mypn = sbm.PhaseNet()
 mypn.load_state_dict(torch.load(str(PN_MODEL_PATH), map_location=torch.device('cpu')))
-mypn.cuda();
 mypn.eval();
+mypn.cuda();
 
 # =================================================================
 # =================================================================
@@ -324,15 +308,20 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
 
     with open(str(STORE_DIR_RESULTS / ("SCORES_%s.txt" % DKPN_gen_name)), "w") as OUT:
         OUT.write(("samples:  %d"+os.linesep*2) % args.test_samples)
+        #
         for vv, kk in DKPN_stats_dict_P.items():
+            vv = "P_"+vv
             OUT.write(("%7s:  %7d"+os.linesep) % ("P_"+vv, kk))
+        #
         OUT.write(os.linesep)
         OUT.write(("P_f1:         %4.2f"+os.linesep) % DKPN_P_f1)
         OUT.write(("P_precision:  %4.2f"+os.linesep) % DKPN_P_precision)
         OUT.write(("P_recall:     %4.2f"+os.linesep*2) % DKPN_P_recall)
         #
         for vv, kk in DKPN_stats_dict_S.items():
+            vv = "S_"+vv
             OUT.write(("%7s:  %7d"+os.linesep) % ("S_"+vv, kk))
+        #
         OUT.write(os.linesep)
         OUT.write(("S_f1:         %4.2f"+os.linesep) % DKPN_S_f1)
         OUT.write(("S_precision:  %4.2f"+os.linesep) % DKPN_S_precision)
@@ -364,14 +353,16 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
     with open(str(STORE_DIR_RESULTS / ("SCORES_%s.txt" % PN_gen_name)), "w") as OUT:
         OUT.write(("samples:  %d"+os.linesep*2) % args.test_samples)
         for vv, kk in PN_stats_dict_P.items():
-            OUT.write(("%7s:  %7d"+os.linesep) % ("P_"+vv, kk))
+            vv = "P_"+vv
+            OUT.write(("%7s:  %7d"+os.linesep) % (vv, kk))
         OUT.write(os.linesep)
         OUT.write(("P_f1:         %4.2f"+os.linesep) % PN_P_f1)
         OUT.write(("P_precision:  %4.2f"+os.linesep) % PN_P_precision)
         OUT.write(("P_recall:     %4.2f"+os.linesep*2) % PN_P_recall)
         #
         for vv, kk in PN_stats_dict_S.items():
-            OUT.write(("%7s:  %7d"+os.linesep) % ("S_"+vv, kk))
+            vv = "S_"+vv
+            OUT.write(("%7s:  %7d"+os.linesep) % (vv, kk))
         OUT.write(os.linesep)
         OUT.write(("S_f1:         %4.2f"+os.linesep) % PN_S_f1)
         OUT.write(("S_precision:  %4.2f"+os.linesep) % PN_S_precision)

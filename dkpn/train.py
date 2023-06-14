@@ -20,43 +20,6 @@ from dkpn.core import PreProc
 # ==================================================================
 
 
-# def select_database_and_size_ETHZ(dataset_size, RANDOM_SEED=42, cache_dir=None):
-
-#     if cache_dir and isinstance(cache_dir, str):
-#         print("Changing SB CACHE-DIR to --> %s" % cache_dir)
-#         original_cache = sb.cache_root
-#         sb.cache_root = cache_dir
-#     #
-#     dataset_train = sbd.ETHZ(sampling_rate=100, cache="trace")
-
-#     if dataset_size.lower() == "nano3":  # NANO3 -> 803 80
-#         dataset_train._set_splits_random_sampling(ratios=(0.021875, 0.0021875, 0.0), random_seed=RANDOM_SEED)
-
-#     elif dataset_size.lower() == "nano2":  # NANO2 -> 1607 160
-#         dataset_train._set_splits_random_sampling(ratios=(0.04375, 0.004375, 0.0), random_seed=RANDOM_SEED)
-
-#     elif dataset_size.lower() == "nano1":  # NANO1 -> 3215 321
-#         dataset_train._set_splits_random_sampling(ratios=(0.0875, 0.00875, 0.0), random_seed=RANDOM_SEED)
-
-#     elif dataset_size.lower() == "nano":  # NANO -> 6430 643
-#         dataset_train._set_splits_random_sampling(ratios=(0.175, 0.0175, 0.0), random_seed=RANDOM_SEED)
-
-#     elif dataset_size.lower() == "micro":  # MICRO -> 12860 1286
-#         dataset_train._set_splits_random_sampling(ratios=(0.35, 0.035, 0.0), random_seed=RANDOM_SEED)
-
-#     elif dataset_size.lower() == "tiny":  # TINY -> 25720 2572
-#         dataset_train._set_splits_random_sampling(ratios=(0.7, 0.07, 0.0), random_seed=RANDOM_SEED)
-
-#     else:
-#         raise ValueError("Not a valid DATASET SIZE!")
-
-#     if cache_dir and isinstance(cache_dir, str):
-#         print("Restoring original SB CACHE-DIR ... %s" % original_cache)
-#         sb.cache_root = original_cache
-
-#     return dataset_train
-
-
 def __filter_sb_dataset__(indata):
     print("... Filtering TRAIN-DATASET")
     indata.filter(indata.metadata["path_ep_distance_km"] <= 100.0, inplace=True)
@@ -68,12 +31,170 @@ def __filter_sb_dataset__(indata):
         np.isnan(indata.metadata["trace_S_arrival_sample"]))
     ), inplace=True)
 
-    # P-S < 3001 (both P and S inside the 30 second window)
+    # P-S < 3000 (both P and S inside the 30 second window)
     indata.filter((indata.metadata["trace_S_arrival_sample"] -
                    indata.metadata["trace_P_arrival_sample"] < 3000),
                   inplace=True)
 
     return indata
+
+
+def __select_database_and_size_ETHZ__(dataset_size, RANDOM_SEED=42):
+
+    dataset_train = sbd.ETHZ(sampling_rate=100, cache="trace")
+
+    if dataset_size.lower() == "nano3":  # NANO3 -> 803 80
+        dataset_train._set_splits_random_sampling(ratios=(0.021875, 0.0021875, 0.0),
+                                                  random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "nano2":  # NANO2 -> 1607 160
+        dataset_train._set_splits_random_sampling(ratios=(0.04375, 0.004375, 0.0),
+                                                  random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "nano1":  # NANO1 -> 3215 321
+        dataset_train._set_splits_random_sampling(ratios=(0.0875, 0.00875, 0.0),
+                                                  random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "nano":  # NANO -> 6430 643
+        dataset_train._set_splits_random_sampling(ratios=(0.175, 0.0175, 0.0),
+                                                  random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "micro":  # MICRO -> 12860 1286
+        dataset_train._set_splits_random_sampling(ratios=(0.35, 0.035, 0.0),
+                                                  random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "tiny":  # TINY -> 25720 2572
+        dataset_train._set_splits_random_sampling(ratios=(0.7, 0.07, 0.0),
+                                                  random_seed=RANDOM_SEED)
+
+    else:
+        raise ValueError("Not a valid DATASET SIZE for ETHZ!")
+
+    return dataset_train
+
+
+def __select_database_and_size_INSTANCE__(dataset_size, filtering=False,
+                                          RANDOM_SEED=42):
+
+    dataset_train = sbd.InstanceCounts(sampling_rate=100, cache="trace")
+
+    # FILTER
+    if filtering:
+        dataset_train = __filter_sb_dataset__(dataset_train)
+        dataset_train.metadata.reset_index(inplace=True)
+
+    # SIZE SPLIT
+    if dataset_size.lower() == "nano3":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.0025, 0.00025, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "nano2":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.005, 0.0005, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "nano1":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.01, 0.001, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "nano":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.02, 0.002, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "micro":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.04, 0.004, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "tiny":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.08, 0.008, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "small":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.2, 0.02, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "medium":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.5, 0.05, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "large":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.8, 0.1, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    else:
+        raise ValueError("Not a valid DATASET SIZE for INSTANCE!")
+
+    return dataset_train
+
+
+def __select_database_and_size_SCEDC__(dataset_size, filtering=False,
+                                       RANDOM_SEED=42):
+
+    dataset_train = sbd.SCEDC(sampling_rate=100, cache="trace")
+
+    # FILTER
+    if filtering:
+        dataset_train = __filter_sb_dataset__(dataset_train)
+        dataset_train.metadata.reset_index(inplace=True)
+
+    # SIZE SPLIT
+    if dataset_size.lower() == "nano3":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.0025, 0.00025, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "nano2":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.005, 0.0005, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "nano1":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.01, 0.001, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "nano":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.02, 0.002, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "micro":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.04, 0.004, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "tiny":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.08, 0.008, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "small":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.2, 0.02, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "medium":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.5, 0.05, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    elif dataset_size.lower() == "large":
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.8, 0.1, 0.0),
+                                            random_seed=RANDOM_SEED)
+
+    else:
+        raise ValueError("Not a valid DATASET SIZE for INSTANCE!")
+
+    return dataset_train
 
 
 def select_database_and_size(dataset_name, dataset_size, RANDOM_SEED=42):
@@ -84,76 +205,46 @@ def select_database_and_size(dataset_name, dataset_size, RANDOM_SEED=42):
     print("Selecting DATASET SIZE:  %s" % dataset_size.upper())
 
     # ===========> DATASET
-    if dataset_name.upper() == "INSTANCE":
-        mydataset = sbd.InstanceCounts(sampling_rate=100, cache="trace")
+    if dataset_name.upper() == "ETHZ":
+        mydataset = __select_database_and_size_ETHZ__(dataset_size.lower(),
+                                                      RANDOM_SEED=RANDOM_SEED)
+
+    elif dataset_name.upper() == "INSTANCE":
+        mydataset = __select_database_and_size_INSTANCE__(
+                                                      dataset_size.lower(),
+                                                      filtering=True,
+                                                      RANDOM_SEED=RANDOM_SEED)
+
     elif dataset_name.upper() == "SCEDC":
-        mydataset = sbd.SCEDC(sampling_rate=100, cache="trace")
-    elif dataset_name.upper() == "ETHZ":
-        mydataset = sbd.ETHZ(sampling_rate=100, cache="trace")
+        mydataset = __select_database_and_size_INSTANCE__(
+                                                      dataset_size.lower(),
+                                                      filtering=True,
+                                                      RANDOM_SEED=RANDOM_SEED)
+
     else:
         raise ValueError("Not a valid DATASET NAME!")
 
-    # ===========> SIZE
-    if dataset_size.lower() == "nano3":
-        mydataset._set_splits_random_sampling(ratios=(0.0025, 0.00025, 0.0),
-                                              random_seed=RANDOM_SEED)
-
-    elif dataset_size.lower() == "nano2":
-        mydataset._set_splits_random_sampling(ratios=(0.005, 0.0005, 0.0),
-                                              random_seed=RANDOM_SEED)
-
-    elif dataset_size.lower() == "nano1":
-        mydataset._set_splits_random_sampling(ratios=(0.01, 0.001, 0.0),
-                                              random_seed=RANDOM_SEED)
-
-    elif dataset_size.lower() == "nano":
-        mydataset._set_splits_random_sampling(ratios=(0.02, 0.002, 0.0),
-                                              random_seed=RANDOM_SEED)
-
-    elif dataset_size.lower() == "micro":
-        mydataset._set_splits_random_sampling(ratios=(0.04, 0.004, 0.0),
-                                              random_seed=RANDOM_SEED)
-
-    elif dataset_size.lower() == "tiny":
-        mydataset._set_splits_random_sampling(ratios=(0.08, 0.008, 0.0),
-                                              random_seed=RANDOM_SEED)
-
-    elif dataset_size.lower() == "small":
-        mydataset._set_splits_random_sampling(ratios=(0.2, 0.02, 0.0),
-                                              random_seed=RANDOM_SEED)
-
-    elif dataset_size.lower() == "medium":
-        mydataset._set_splits_random_sampling(ratios=(0.5, 0.05, 0.0),
-                                              random_seed=RANDOM_SEED)
-
-    elif dataset_size.lower() == "large":
-        mydataset._set_splits_random_sampling(ratios=(0.8, 0.1, 0.0),
-                                              random_seed=RANDOM_SEED)
-
-    else:
-        raise ValueError("Not a valid DATASET SIZE!")
-
     return mydataset
 
+# ==================================================================
+# ==================================================================
+# ==================================================================    
+# ==================================================================
+# ==================================================================
+# ==================================================================
+# ==================================================================
+# ==================================================================
+# ==================================================================    
+# ==================================================================
+# ==================================================================
+# ==================================================================    
+# ==================================================================
+# ==================================================================
+# ==================================================================    
+# ==================================================================
+# ==================================================================
+# ==================================================================
 
-# ==================================================================
-# ==================================================================
-# ==================================================================    
-# ==================================================================
-# ==================================================================
-# ==================================================================
-# ==================================================================
-# ==================================================================
-# ==================================================================    
-# ==================================================================
-# ==================================================================
-# ==================================================================    
-# ==================================================================
-# ==================================================================
-# ==================================================================    
-# ==================================================================
-# ==================================================================
-# ==================================================================
 
 class TrainHelp_DomainKnowledgePhaseNet(object):
 
@@ -421,25 +512,25 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
     def get_loader(self):
         return (self.train_loader, self.dev_loader, self.test_loader)
 
+# ==================================================================
+# ==================================================================
+# ==================================================================    
+# ==================================================================
+# ==================================================================
+# ==================================================================
+# ==================================================================
+# ==================================================================
+# ==================================================================    
+# ==================================================================
+# ==================================================================
+# ==================================================================    
+# ==================================================================
+# ==================================================================
+# ==================================================================    
+# ==================================================================
+# ==================================================================
+# ==================================================================
 
-# ==================================================================
-# ==================================================================
-# ==================================================================    
-# ==================================================================
-# ==================================================================
-# ==================================================================
-# ==================================================================
-# ==================================================================
-# ==================================================================    
-# ==================================================================
-# ==================================================================
-# ==================================================================    
-# ==================================================================
-# ==================================================================
-# ==================================================================    
-# ==================================================================
-# ==================================================================
-# ==================================================================
 
 class TrainHelp_PhaseNet(object):
 

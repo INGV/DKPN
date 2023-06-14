@@ -51,19 +51,9 @@ print(f"BATCH_SIZE: {args.batch_size}")
 # ----------------------------------------------------------------------------
 # SELECT DATASET and SIZE
 
-if args.dataset_name.lower() == "ethz":
-    dataset_train = dktrain.select_database_and_size_ETHZ(
-                                                args.dataset_size,
-                                                RANDOM_SEED=args.random_seed)
-else:
-    dataset_train = dktrain.select_database_and_size(
-                                args.dataset_name, args.dataset_size,
-                                RANDOM_SEED=args.random_seed)
-
-
-# === FILTER+SPLIT
-if args.dataset_name.lower() == "instance":
-    dataset_train = dktrain.__filter_sb_dataset__(dataset_train)
+dataset_train = dktrain.select_database_and_size(
+                            args.dataset_name, args.dataset_size,
+                            RANDOM_SEED=args.random_seed)
 
 train, dev, test = dataset_train.train_dev_test()
 
