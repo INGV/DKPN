@@ -43,29 +43,35 @@ def __select_database_and_size_ETHZ__(dataset_size, RANDOM_SEED=42):
 
     dataset_train = sbd.ETHZ(sampling_rate=100, cache="trace")
 
-    if dataset_size.lower() == "nano3":  # NANO3 -> 803 80
-        dataset_train._set_splits_random_sampling(ratios=(0.021875, 0.0021875, 0.0),
-                                                  random_seed=RANDOM_SEED)
+    if dataset_size.lower() == "nano3":  # NANO3 -> 803 80*2
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.021875, 0.0043750, 0.0),
+                                            random_seed=RANDOM_SEED)
 
-    elif dataset_size.lower() == "nano2":  # NANO2 -> 1607 160
-        dataset_train._set_splits_random_sampling(ratios=(0.04375, 0.004375, 0.0),
-                                                  random_seed=RANDOM_SEED)
+    elif dataset_size.lower() == "nano2":  # NANO2 -> 1607 160*2
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.04375, 0.008750, 0.0),
+                                            random_seed=RANDOM_SEED)
 
-    elif dataset_size.lower() == "nano1":  # NANO1 -> 3215 321
-        dataset_train._set_splits_random_sampling(ratios=(0.0875, 0.00875, 0.0),
-                                                  random_seed=RANDOM_SEED)
+    elif dataset_size.lower() == "nano1":  # NANO1 -> 3215 321*2
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.0875, 0.01750, 0.0),
+                                            random_seed=RANDOM_SEED)
 
-    elif dataset_size.lower() == "nano":  # NANO -> 6430 643
-        dataset_train._set_splits_random_sampling(ratios=(0.175, 0.0175, 0.0),
-                                                  random_seed=RANDOM_SEED)
+    elif dataset_size.lower() == "nano":  # NANO -> 6430 643*2
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.175, 0.0350, 0.0),
+                                            random_seed=RANDOM_SEED)
 
-    elif dataset_size.lower() == "micro":  # MICRO -> 12860 1286
-        dataset_train._set_splits_random_sampling(ratios=(0.35, 0.035, 0.0),
-                                                  random_seed=RANDOM_SEED)
+    elif dataset_size.lower() == "micro":  # MICRO -> 12860 1286*2
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.35, 0.070, 0.0),
+                                            random_seed=RANDOM_SEED)
 
-    elif dataset_size.lower() == "tiny":  # TINY -> 25720 2572
-        dataset_train._set_splits_random_sampling(ratios=(0.7, 0.07, 0.0),
-                                                  random_seed=RANDOM_SEED)
+    elif dataset_size.lower() == "tiny":  # TINY -> 25720 2572*2
+        dataset_train._set_splits_random_sampling(
+                                            ratios=(0.7, 0.14, 0.0),
+                                            random_seed=RANDOM_SEED)
 
     else:
         raise ValueError("Not a valid DATASET SIZE for ETHZ!")
@@ -86,47 +92,47 @@ def __select_database_and_size_INSTANCE__(dataset_size, filtering=False,
     # SIZE SPLIT
     if dataset_size.lower() == "nano3":
         dataset_train._set_splits_random_sampling(
-                                            ratios=(0.0025, 0.00025, 0.0),
+                                            ratios=(0.0025, 0.00050, 0.0),
                                             random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "nano2":
         dataset_train._set_splits_random_sampling(
-                                            ratios=(0.005, 0.0005, 0.0),
+                                            ratios=(0.005, 0.0010, 0.0),
                                             random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "nano1":
         dataset_train._set_splits_random_sampling(
-                                            ratios=(0.01, 0.001, 0.0),
+                                            ratios=(0.01, 0.002, 0.0),
                                             random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "nano":
         dataset_train._set_splits_random_sampling(
-                                            ratios=(0.02, 0.002, 0.0),
+                                            ratios=(0.02, 0.004, 0.0),
                                             random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "micro":
         dataset_train._set_splits_random_sampling(
-                                            ratios=(0.04, 0.004, 0.0),
+                                            ratios=(0.04, 0.008, 0.0),
                                             random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "tiny":
         dataset_train._set_splits_random_sampling(
-                                            ratios=(0.08, 0.008, 0.0),
+                                            ratios=(0.08, 0.016, 0.0),
                                             random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "small":
         dataset_train._set_splits_random_sampling(
-                                            ratios=(0.2, 0.02, 0.0),
+                                            ratios=(0.2, 0.04, 0.0),
                                             random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "medium":
         dataset_train._set_splits_random_sampling(
-                                            ratios=(0.5, 0.05, 0.0),
+                                            ratios=(0.5, 0.1, 0.0),
                                             random_seed=RANDOM_SEED)
 
     elif dataset_size.lower() == "large":
         dataset_train._set_splits_random_sampling(
-                                            ratios=(0.8, 0.1, 0.0),
+                                            ratios=(0.8, 0.16, 0.0),
                                             random_seed=RANDOM_SEED)
 
     else:
@@ -427,7 +433,7 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
         self.dkpnmod.train()  # 20230524
 
         test_loss /= num_batches
-        print(f"Test avg loss: {test_loss:>8f}\n")
+        print(f"Dev. avg loss: {test_loss:>8f}\n")
         return test_loss
 
     def train_me(self,
@@ -715,7 +721,7 @@ class TrainHelp_PhaseNet(object):
         self.pnmod.train()  # 20230524
 
         test_loss /= num_batches
-        print(f"Test avg loss: {test_loss:>8f}\n")
+        print(f"Dev. avg loss: {test_loss:>8f}\n")
         return test_loss
 
     def train_me(self,

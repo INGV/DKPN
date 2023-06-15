@@ -4,12 +4,7 @@ import sys
 import pickle
 import matplotlib.pyplot as plt
 import seaborn as sns
-import pandas as pd
-import numpy as np
 from pathlib import Path
-
-from collections import OrderedDict
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 sns.set(style="darkgrid")
 
@@ -41,8 +36,8 @@ for pp in pickles_DKPN:
     DKPN_SCORES[SIZE] = loaded_data
 
 PN_SCORES = {}
-pickles_PN = Path(".").glob("Results_INSTANCE_INSTANCE_*/results_PN.pickle")
-
+pickles_PN = Path(".").glob("Results_%s_%s_*/results_PN.pickle" % (
+                               TRAINNAME, TESTNAME))
 for pp in pickles_PN:
     pp = str(pp)
     SIZE = pp.split("/")[0].split("_")[-1]

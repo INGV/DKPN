@@ -33,9 +33,7 @@ for _picker in ("DKPN", "PN"):
     RND = int(_path.split("/")[0].split("_")[6])
     BATCH = int(_path.split("/")[0].split("_")[12])
     LR = float(_path.split("/")[0].split("_")[10]); LR = "{:.1e}".format(LR)
-    EPOCHS = int(_path.split("/")[0].split("_")[8])
-
-    ZOOM_EPOCHS_INTERVAL = [EPOCHS-((EPOCHS//3)*2), EPOCHS]
+    # EPOCHS = int(_path.split("/")[0].split("_")[8])
 
     order = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY"]
     traintestlosses = OrderedDict((key, traintestlosses[key]) for key in order)
@@ -46,8 +44,11 @@ for _picker in ("DKPN", "PN"):
     _test = [df[" TEST_LOSS"] for sz, df in traintestlosses.items()]
     _train = pd.concat([s for s in _train])
     _test = pd.concat([s for s in _test])
-
     ylimmax = max(max(_train), max(_test))
+
+    _epochs = [df["EPOCH"] for sz, df in traintestlosses.items()]
+    _epochs = pd.concat([s for s in _epochs])
+    xlimmax = max(_epochs)
 
     fig, axs = plt.subplots(2, 3, figsize=(16, 9))
     axs_flat = np.ravel(axs)
@@ -59,9 +60,10 @@ for _picker in ("DKPN", "PN"):
         sns.lineplot(x=df["EPOCH"], y=df[" TRAIN_LOSS"], linestyle="dashed",
                      label="Train", color="red", ax=ax)
         sns.lineplot(x=df["EPOCH"], y=df[" TEST_LOSS"],
-                     label="Test", color="teal", ax=ax)
+                     label="Dev", color="teal", ax=ax)
         #
         ax.set_ylim([0, ylimmax])
+        ax.set_xlim([-4, xlimmax])
         ax.set_xlabel('epochs', fontstyle='italic', fontsize=14, fontname="Lato")
         ax.set_ylabel('value', fontstyle='italic', fontsize=14, fontname="Lato")
 
@@ -71,6 +73,9 @@ for _picker in ("DKPN", "PN"):
 
         # === SUBPANEL
         if ii >= 2:
+            _maxepoch = max(df["EPOCH"])
+            ZOOM_EPOCHS_INTERVAL = [_maxepoch-((_maxepoch//3)*2), _maxepoch]
+
             ax_subpanel = inset_axes(ax, width="50%", height="25%", loc="center right")
             sns.lineplot(x=df["EPOCH"], y=df[" TRAIN_LOSS"], linestyle="dashed", color="red", ax=ax_subpanel)
             sns.lineplot(x=df["EPOCH"], y=df[" TEST_LOSS"], color="teal", ax=ax_subpanel)
@@ -80,10 +85,10 @@ for _picker in ("DKPN", "PN"):
             ax_subpanel.set_ylabel('')
 
     # ===============================================================
-    supfigtitle = "%s Train/Dev loss curves (RND: %d -B:%d - LR:%s - EP:%d) - %s" % (
-                _picker, RND, BATCH, LR, EPOCHS, TRAINNAME)
+    supfigtitle = "%s Train/Dev loss curves (RND: %d -B:%d - LR:%s) - %s" % (
+                _picker, RND, BATCH, LR, TRAINNAME)
     plt.suptitle(supfigtitle, fontweight='bold', fontsize=18, fontname="Lato")
-    plt.tight_layout()
+    # plt.tight_layout()
     fig.savefig(str(STORE_DIR / ("TrainTest_CURVES_%s.pdf" % _picker)))
 
 print("DONE")

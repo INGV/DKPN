@@ -91,7 +91,6 @@ TRAIN_CLASS = dktrain.TrainHelp_PhaseNet(
                     "amp_norm_type": "std",
                     "window_strategy": "move",  # "pad"
                     "final_windowlength": 3001,
-                    "fp_stabilization": 400,
                     "sigma": 10,
                     "fp_stabilization": 400,
                     "phase_dict": {
@@ -147,7 +146,5 @@ plt.plot(train_loss_epochs, label="TRAIN_Loss", color="red", lw=2)
 plt.plot(dev_loss_epochs, label="DEV_Loss", color="teal", lw=2)
 plt.xlabel("epochs")
 plt.ylabel("cross-entropy loss")
-# plt.ylim([0,0.1])
-# plt.yscale("log")
 plt.legend()
 fig.savefig(str(STORE_DIR_MODEL / "TrainTest_LOSS.pdf"))
