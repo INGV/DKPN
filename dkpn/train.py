@@ -1,4 +1,3 @@
-
 from tqdm import tqdm
 import os
 import numpy as np
@@ -20,28 +19,43 @@ from dkpn.core import PreProc
 # ==================================================================
 
 
-def __filter_sb_dataset__(indata):
-    print("... Filtering TRAIN-DATASET")
-    indata.filter(indata.metadata["path_ep_distance_km"] <= 100.0, inplace=True)
-    indata.filter(indata.metadata["station_channels"] == "HH", inplace=True)
+def __filter_sb_dataset__(indata, filter_for="INSTANCE"):
 
-    # P and S
-    indata.filter(np.logical_not(np.logical_or(   # not (no P or no S)
-        np.isnan(indata.metadata["trace_P_arrival_sample"]),
-        np.isnan(indata.metadata["trace_S_arrival_sample"]))
-    ), inplace=True)
+    if filter_for.lower() == "instance":
+        indata.filter(indata.metadata["path_ep_distance_km"] <= 100.0, inplace=True)
+        indata.filter(indata.metadata["station_channels"] == "HH", inplace=True)
 
-    # P-S < 3000 (both P and S inside the 30 second window)
-    indata.filter((indata.metadata["trace_S_arrival_sample"] -
-                   indata.metadata["trace_P_arrival_sample"] < 3000),
-                  inplace=True)
+        # P and S
+        indata.filter(np.logical_not(np.logical_or(   # not (no P or no S)
+            np.isnan(indata.metadata["trace_P_arrival_sample"]),
+            np.isnan(indata.metadata["trace_S_arrival_sample"]))
+        ), inplace=True)
+
+        # P-S < 3000 (both P and S inside the 30 second window)
+        indata.filter((indata.metadata["trace_S_arrival_sample"] -
+                       indata.metadata["trace_P_arrival_sample"] < 3000),
+                      inplace=True)
+
+    elif filter_for.lower() == "ethz":
+        indata.filter(indata.metadata["trace_completeness"] >= 0.99, inplace=True)
+
+    else:
+        raise ValueError("Invalid Filtering key!")
 
     return indata
 
 
-def __select_database_and_size_ETHZ__(dataset_size, RANDOM_SEED=42):
+def __select_database_and_size_ETHZ__(dataset_size, filtering=False,
+                                      use_biggest_anyway=True,
+                                      RANDOM_SEED=42):
 
     dataset_train = sbd.ETHZ(sampling_rate=100, cache="trace")
+
+    # FILTER
+    if filtering:
+        dataset_train = __filter_sb_dataset__(dataset_train,
+                                              filter_for="ETHZ")
+        dataset_train.metadata.reset_index(inplace=True)
 
     if dataset_size.lower() == "nano3":  # NANO3 -> 803 80*2
         dataset_train._set_splits_random_sampling(
@@ -74,7 +88,13 @@ def __select_database_and_size_ETHZ__(dataset_size, RANDOM_SEED=42):
                                             random_seed=RANDOM_SEED)
 
     else:
-        raise ValueError("Not a valid DATASET SIZE for ETHZ!")
+        if use_biggest_anyway:
+            # Use the biggest possible --> in our case TINY
+            dataset_train._set_splits_random_sampling(
+                                                ratios=(0.7, 0.14, 0.0),
+                                                random_seed=RANDOM_SEED)
+        else:
+            raise ValueError("Not a valid DATASET SIZE for ETHZ!")
 
     return dataset_train
 
@@ -86,7 +106,8 @@ def __select_database_and_size_INSTANCE__(dataset_size, filtering=False,
 
     # FILTER
     if filtering:
-        dataset_train = __filter_sb_dataset__(dataset_train)
+        dataset_train = __filter_sb_dataset__(dataset_train,
+                                              filter_for="INSTANCE")
         dataset_train.metadata.reset_index(inplace=True)
 
     # SIZE SPLIT
@@ -213,6 +234,7 @@ def select_database_and_size(dataset_name, dataset_size, RANDOM_SEED=42):
     # ===========> DATASET
     if dataset_name.upper() == "ETHZ":
         mydataset = __select_database_and_size_ETHZ__(dataset_size.lower(),
+                                                      filtering=True,
                                                       RANDOM_SEED=RANDOM_SEED)
 
     elif dataset_name.upper() == "INSTANCE":
@@ -463,7 +485,56 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
 
             _test_loss = self.__test_loop__()
             test_loss_epochs.append(_test_loss)
+        #
+        self.__training_epochs__ = t+1
+        return (train_loss_epochs, test_loss_epochs)
 
+    def train_me_early_stop(
+                self,
+                epochs=15,
+                optimizer_type="adam",
+                learning_rate=1e-2,
+                patience=5,
+                delta=0.001):  # Threshold for minimum improvement
+
+        """ Daje """
+
+        # Defining OPTIMIZER
+        if optimizer_type.lower() in ("adam", "adm"):
+            optim = torch.optim.Adam(self.dkpnmod.parameters(),
+                                     lr=learning_rate)
+        else:
+            raise ValueError("At the moment only the 'Adam' optimizer "
+                             "is supported!")
+
+        # ------------------------ GO
+        train_loss_epochs, test_loss_epochs = [], []
+
+        losses = []  # track losses for the last 'patience' epochs
+
+        for t in range(epochs):
+            print(f"Epoch {t+1}\n-------------------------------")
+
+            _train_loss = self.__train_loop__(optimizer=optim)
+            train_loss_epochs.append(_train_loss)
+
+            _test_loss = self.__test_loop__()
+            test_loss_epochs.append(_test_loss)
+            losses.append(_test_loss)
+
+            # If we have more than 'patience' epochs done,
+            # we can start checking for early stopping
+            if t >= patience:
+                # Calculate improvement in the last 'patience' epochs
+                improvement = (test_loss_epochs[-patience-1] -
+                               np.mean(test_loss_epochs[-patience:]))
+
+                # If improvement is less than 'delta', stop the training
+                if improvement < delta:
+                    print("Early stopping triggered! - EPOCH:  %d" % (t+1))
+                    break
+        #
+        self.__training_epochs__ = t+1
         return (train_loss_epochs, test_loss_epochs)
 
     def store_weigths(self, dir_path, model_name, jsonstring, version="1"):
@@ -581,6 +652,7 @@ class TrainHelp_PhaseNet(object):
         self.test_generator = sbg.GenericGenerator(test_sb_data)
         self.random_seed = random_seed
         self.train_loader, self.dev_loader, self.test_loader = None, None, None
+        self.__training_epochs__ = None
 
         # ----------  0. Define query windows
         self.pnmod = pninstance
@@ -660,7 +732,7 @@ class TrainHelp_PhaseNet(object):
             ]
         #
         return augmentations_list
-#import matplotlib.pyplot as plt; plt.plot(batch["X"][0].T); plt.show()
+
     def extract_windows_cfs(self):
         outdict = {}
 
@@ -751,7 +823,56 @@ class TrainHelp_PhaseNet(object):
 
             _test_loss = self.__test_loop__()
             test_loss_epochs.append(_test_loss)
+        #
+        self.__training_epochs__ = t+1
+        return (train_loss_epochs, test_loss_epochs)
 
+    def train_me_early_stop(
+                self,
+                epochs=15,
+                optimizer_type="adam",
+                learning_rate=1e-2,
+                patience=5,
+                delta=0.001):  # Threshold for minimum improvement
+
+        """ Daje """
+
+        # Defining OPTIMIZER
+        if optimizer_type.lower() in ("adam", "adm"):
+            optim = torch.optim.Adam(self.pnmod.parameters(),
+                                     lr=learning_rate)
+        else:
+            raise ValueError("At the moment only the 'Adam' optimizer "
+                             "is supported!")
+
+        # ------------------------ GO
+        train_loss_epochs, test_loss_epochs = [], []
+
+        losses = []  # track losses for the last 'patience' epochs
+
+        for t in range(epochs):
+            print(f"Epoch {t+1}\n-------------------------------")
+
+            _train_loss = self.__train_loop__(optimizer=optim)
+            train_loss_epochs.append(_train_loss)
+
+            _test_loss = self.__test_loop__()
+            test_loss_epochs.append(_test_loss)
+            losses.append(_test_loss)
+
+            # If we have more than 'patience' epochs done,
+            # we can start checking for early stopping
+            if t >= patience:
+                # Calculate improvement in the last 'patience' epochs
+                improvement = (test_loss_epochs[-patience-1] -
+                               np.mean(test_loss_epochs[-patience:]))
+
+                # If improvement is less than 'delta', stop the training
+                if improvement < delta:
+                    print("Early stopping triggered! - EPOCH:  %d" % (t+1))
+                    break
+        #
+        self.__training_epochs__ = t+1
         return (train_loss_epochs, test_loss_epochs)
 
     def store_weigths(self, dir_path, model_name, jsonstring, version="1"):

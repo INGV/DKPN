@@ -30,21 +30,31 @@ parser.add_argument('-s', '--dataset_size', type=str, default='Nano', help='Data
 parser.add_argument('-r', '--random_seed', type=int, default=42, help='Random seed')
 parser.add_argument('-o', '--store_folder', type=str, default=None, help='Store folder')
 #
-parser.add_argument('-e', '--epochs', type=int, default=25, help='Num. Epochs for training')
+parser.add_argument('-e', '--epochs', type=int, default=25, help='Max. Num. Epochs for training')
 parser.add_argument('-l', '--learning_rate', type=float, default=1e-3, help='Learning Rate for training')
 parser.add_argument('-b', '--batch_size', type=int, default=32, help='Batch-Size for training')
 #
+parser.add_argument("--early_stop", action="store_true", help="Adopt early-stop regulation for epochs")
+parser.add_argument('-x', '--patience', type=int, default=5, help='Num. Epochs to evaluate for early stop')
+parser.add_argument('-y', '--delta', type=float, default=0.001, help='Mean dev_loss improvement over the latest patience epochs')
+#
 args = parser.parse_args()
 
-# Your main function here
+print("---> Training: DKPN")
+print("")
 print(f"DATASET_NAME: {args.dataset_name}")
 print(f"DATASET_SIZE: {args.dataset_size}")
 print(f"RANDOM_SEED: {args.random_seed}")
 print(f"STORE_FOLDER: {args.store_folder}")
 print("")
-print(f"EPOCHS: {args.epochs}")
+print(f"MAX. EPOCHS: {args.epochs}")
 print(f"LEARNING_RATE: {args.learning_rate}")
 print(f"BATCH_SIZE: {args.batch_size}")
+print("")
+print(f"EARLY STOP: {args.early_stop}")
+print(f"  PATIENCE: {args.patience}")
+print(f"     DELTA: {args.delta}")
+print("")
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
@@ -123,18 +133,49 @@ TRAIN_CLASS = dktrain.TrainHelp_DomainKnowledgePhaseNet(
 )
 
 
+# ----------------------------------------------------------------------------
 # --------------->    ACTUAL TRAINING  <---------------
 
-train_loss_epochs, dev_loss_epochs = TRAIN_CLASS.train_me(epochs=args.epochs, optimizer_type="adam", learning_rate=args.learning_rate)
+if args.early_stop:
+    train_loss_epochs, dev_loss_epochs = TRAIN_CLASS.train_me_early_stop(
+        epochs=args.epochs, optimizer_type="adam",
+        learning_rate=args.learning_rate,
+        patience=args.patience, delta=args.delta)
+
+else:
+    train_loss_epochs, dev_loss_epochs = TRAIN_CLASS.train_me(
+        epochs=args.epochs, optimizer_type="adam",
+        learning_rate=args.learning_rate)
+
+# ----------------------------------------------------------------------------
+# --------------->    STORE   MODEL    <---------------
+
+_actual_epochs = TRAIN_CLASS.__training_epochs__
+MODEL_NAME = "DKPN_TrainDataset_%s_Size_%s_Rnd_%d_Epochs_%d_LR_%06.4f_Batch_%d" % (
+                    args.dataset_name, args.dataset_size, args.random_seed,
+                    _actual_epochs, args.learning_rate, args.batch_size)
+
+if not args.store_folder:
+    STORE_DIR_MODEL = Path(MODEL_NAME)
+else:
+    STORE_DIR_MODEL = Path(args.store_folder)
+#
+if not STORE_DIR_MODEL.is_dir():
+    STORE_DIR_MODEL.mkdir(parents=True, exist_ok=True)
+
 TRAIN_CLASS.store_weigths(STORE_DIR_MODEL, MODEL_NAME, MODEL_NAME, version="1")
 
-# Store TABLE
+# ----------------------------------------------------------------------------
+# --------------->    STORE   TABLE    <---------------
+
 with open(str(STORE_DIR_MODEL / "TRAIN_TEST_loss.csv"), "w") as OUT:
     OUT.write("EPOCH, TRAIN_LOSS, TEST_LOSS"+os.linesep)
     for xx, (trn, tst) in enumerate(zip(train_loss_epochs, dev_loss_epochs)):
         OUT.write(("%d, %.4f, %.4f"+os.linesep) % (xx, trn, tst))
 
-# Store PARAMETER
+# ----------------------------------------------------------------------------
+# --------------->    STORE   PARAMETERS    <---------------
+
 with open(str(STORE_DIR_MODEL / "TRAIN_ARGS.py"), "w") as OUT:
     OUT.write("TRAINARGS=%s" % args)
 
@@ -147,19 +188,12 @@ with open(str(STORE_DIR_MODEL / "TRAIN_DATA_INFO.txt"), "w") as OUT:
     OUT.write((" TEST samples %s:  %d"+os.linesep) % (args.dataset_name,
                                                       len(test)))
 
+# ----------------------------------------------------------------------------
 fig = plt.figure(figsize=(10, 7))
 plt.plot(train_loss_epochs, label="TRAIN_Loss", color="red", lw=2)
 plt.plot(dev_loss_epochs, label="DEV_Loss", color="teal", lw=2)
 plt.xlabel("epochs")
 plt.ylabel("cross-entropy loss")
 plt.legend()
-fig.savefig(str(STORE_DIR_MODEL / "TrainTest_LOSS.pdf"))
-
-
-fig = plt.figure(figsize=(10, 7))
-plt.plot(train_loss_epochs, label="TRAIN_Loss", color="red", lw=2)
-plt.plot(dev_loss_epochs, label="DEV_Loss", color="teal", lw=2)
-plt.xlabel("epochs")
-plt.ylabel("cross-entropy loss")
-plt.legend()
+plt.tight_layout()
 fig.savefig(str(STORE_DIR_MODEL / "TrainTest_LOSS.pdf"))

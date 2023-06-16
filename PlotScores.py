@@ -11,6 +11,8 @@ sns.set(style="darkgrid")
 TRAINNAME = sys.argv[1]
 TESTNAME = sys.argv[2]
 
+X_LABELS = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY"]
+
 # =================================================
 # =================================================
 # =================================================
@@ -75,17 +77,16 @@ ax = axs[0, 0]
 
 # --- Get VALS
 key_list = ["P_FN", "P_FP", "P_TP"]
-x_labels = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY"]
 
-VALUES_DKPN = extract_dict_values(DKPN_SCORES, key_list, order=x_labels)
-VALUES_PN = extract_dict_values(PN_SCORES, key_list, order=x_labels)
+VALUES_DKPN = extract_dict_values(DKPN_SCORES, key_list, order=X_LABELS)
+VALUES_PN = extract_dict_values(PN_SCORES, key_list, order=X_LABELS)
 
 for i, values in enumerate(VALUES_PN):
-    sns.lineplot(x=x_labels, y=values, marker='o', linestyle="dashed",
+    sns.lineplot(x=X_LABELS, y=values, marker='o', linestyle="dashed",
                  label="PN_"+key_list[i], ax=ax, color=color_list[i])
 
 for i, values in enumerate(VALUES_DKPN):
-    sns.lineplot(x=x_labels, y=values, marker='s', label="DKPN_"+key_list[i],
+    sns.lineplot(x=X_LABELS, y=values, marker='s', label="DKPN_"+key_list[i],
                  ax=ax, color=color_list[i])
 
 # --- Decorator
@@ -102,17 +103,16 @@ ax = axs[1, 0]
 
 # --- Get VALS
 key_list = ["P_recall", "P_precision", "P_f1"]
-x_labels = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY"]
 
-VALUES_DKPN = extract_dict_values(DKPN_SCORES, key_list, order=x_labels)
-VALUES_PN = extract_dict_values(PN_SCORES, key_list, order=x_labels)
+VALUES_DKPN = extract_dict_values(DKPN_SCORES, key_list, order=X_LABELS)
+VALUES_PN = extract_dict_values(PN_SCORES, key_list, order=X_LABELS)
 
 for i, values in enumerate(VALUES_PN):
-    sns.lineplot(x=x_labels, y=values, marker='o', linestyle="dashed",
+    sns.lineplot(x=X_LABELS, y=values, marker='o', linestyle="dashed",
                  label="PN_"+key_list[i], ax=ax, color=color_list[i])
 
 for i, values in enumerate(VALUES_DKPN):
-    sns.lineplot(x=x_labels, y=values, marker='s', label="DKPN_"+key_list[i],
+    sns.lineplot(x=X_LABELS, y=values, marker='s', label="DKPN_"+key_list[i],
                  ax=ax, color=color_list[i])
 
 # --- Decorator
@@ -129,17 +129,16 @@ ax = axs[0, 1]
 
 # --- Get VALS
 key_list = ["S_FN", "S_FP", "S_TP"]
-x_labels = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY"]
 
-VALUES_DKPN = extract_dict_values(DKPN_SCORES, key_list, order=x_labels)
-VALUES_PN = extract_dict_values(PN_SCORES, key_list, order=x_labels)
+VALUES_DKPN = extract_dict_values(DKPN_SCORES, key_list, order=X_LABELS)
+VALUES_PN = extract_dict_values(PN_SCORES, key_list, order=X_LABELS)
 
 for i, values in enumerate(VALUES_PN):
-    sns.lineplot(x=x_labels, y=values, marker='o', linestyle="dashed",
+    sns.lineplot(x=X_LABELS, y=values, marker='o', linestyle="dashed",
                  label="PN_"+key_list[i], ax=ax, color=color_list[i])
 
 for i, values in enumerate(VALUES_DKPN):
-    sns.lineplot(x=x_labels, y=values, marker='s', label="DKPN_"+key_list[i],
+    sns.lineplot(x=X_LABELS, y=values, marker='s', label="DKPN_"+key_list[i],
                  ax=ax, color=color_list[i])
 
 # --- Decorator
@@ -156,17 +155,16 @@ ax = axs[1, 1]
 
 # --- Get VALS
 key_list = ["S_recall", "S_precision", "S_f1"]
-x_labels = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY"]
 
-VALUES_DKPN = extract_dict_values(DKPN_SCORES, key_list, order=x_labels)
-VALUES_PN = extract_dict_values(PN_SCORES, key_list, order=x_labels)
+VALUES_DKPN = extract_dict_values(DKPN_SCORES, key_list, order=X_LABELS)
+VALUES_PN = extract_dict_values(PN_SCORES, key_list, order=X_LABELS)
 
 for i, values in enumerate(VALUES_PN):
-    sns.lineplot(x=x_labels, y=values, marker='o', linestyle="dashed",
+    sns.lineplot(x=X_LABELS, y=values, marker='o', linestyle="dashed",
                  label="PN_"+key_list[i], ax=ax, color=color_list[i])
 
 for i, values in enumerate(VALUES_DKPN):
-    sns.lineplot(x=x_labels, y=values, marker='s', label="DKPN_"+key_list[i],
+    sns.lineplot(x=X_LABELS, y=values, marker='s', label="DKPN_"+key_list[i],
                  ax=ax, color=color_list[i])
 
 # --- Decorator
@@ -178,7 +176,8 @@ ax.legend()  # Display the legend
 
 
 # ===============================================================
-plt.suptitle('ETHZ Training (B:32 - LR:1e-4 - EP: 100) - ETHZ Testing', fontweight='bold', fontsize=18, fontname="Lato")  #fontfamily='sans-serif')
+plt.suptitle("%s Training - %s Testing" % (TRAINNAME, TESTNAME),
+             fontweight='bold', fontsize=18, fontname="Lato")  #fontfamily='sans-serif')
 plt.tight_layout()  # Adjust the spacing between subplots
 fig.savefig(str(
         STORE_DIR / ("ScoresResults_%s_%s.pdf" % (TRAINNAME, TESTNAME))

@@ -65,8 +65,13 @@ print(f"NPLOTS: {args.nplots}")
 print(f"NSAMPLES: {args.test_samples}")
 
 
-DKPN_MODEL_PATH = Path(args.dkpn_model_name+"/"+args.dkpn_model_name+".pt")
-PN_MODEL_PATH = Path(args.pn_model_name+"/"+args.pn_model_name+".pt")
+# DKPN_MODEL_PATH = Path(args.dkpn_model_name+"/"+args.dkpn_model_name+".pt")
+# PN_MODEL_PATH = Path(args.pn_model_name+"/"+args.pn_model_name+".pt")
+
+DKPN_MODEL_PATH = [xx for xx in Path(args.dkpn_model_name).glob("*.pt")][0]
+PN_MODEL_PATH = [xx for xx in Path(args.pn_model_name).glob("*.pt")][0]
+
+
 STORE_DIR_RESULTS = Path(args.store_folder)
 if not STORE_DIR_RESULTS.is_dir():
     STORE_DIR_RESULTS.mkdir(parents=True, exist_ok=True)
@@ -311,7 +316,7 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         #
         for vv, kk in DKPN_stats_dict_P.items():
             vv = "P_"+vv
-            OUT.write(("%7s:  %7d"+os.linesep) % ("P_"+vv, kk))
+            OUT.write(("%7s:  %7d"+os.linesep) % (vv, kk))
         #
         OUT.write(os.linesep)
         OUT.write(("P_f1:         %4.2f"+os.linesep) % DKPN_P_f1)
@@ -320,7 +325,7 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         #
         for vv, kk in DKPN_stats_dict_S.items():
             vv = "S_"+vv
-            OUT.write(("%7s:  %7d"+os.linesep) % ("S_"+vv, kk))
+            OUT.write(("%7s:  %7d"+os.linesep) % (vv, kk))
         #
         OUT.write(os.linesep)
         OUT.write(("S_f1:         %4.2f"+os.linesep) % DKPN_S_f1)

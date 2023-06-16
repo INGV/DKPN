@@ -31,9 +31,8 @@ for _picker in ("DKPN", "PN"):
     #
     TRAINNAME = _path.split("/")[0].split("_")[2]
     RND = int(_path.split("/")[0].split("_")[6])
-    BATCH = int(_path.split("/")[0].split("_")[12])
-    LR = float(_path.split("/")[0].split("_")[10]); LR = "{:.1e}".format(LR)
-    # EPOCHS = int(_path.split("/")[0].split("_")[8])
+    BATCH = int(_path.split("/")[0].split("_")[-1])
+    LR = "{:.1e}".format(float(_path.split("/")[0].split("_")[-3]))
 
     order = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY"]
     traintestlosses = OrderedDict((key, traintestlosses[key]) for key in order)
@@ -72,23 +71,22 @@ for _picker in ("DKPN", "PN"):
         ax.legend()  # Display the legend
 
         # === SUBPANEL
-        if ii >= 2:
-            _maxepoch = max(df["EPOCH"])
-            ZOOM_EPOCHS_INTERVAL = [_maxepoch-((_maxepoch//3)*2), _maxepoch]
+        _maxepoch = max(df["EPOCH"])
+        ZOOM_EPOCHS_INTERVAL = [_maxepoch-((_maxepoch//3)*2), _maxepoch]
 
-            ax_subpanel = inset_axes(ax, width="50%", height="25%", loc="center right")
-            sns.lineplot(x=df["EPOCH"], y=df[" TRAIN_LOSS"], linestyle="dashed", color="red", ax=ax_subpanel)
-            sns.lineplot(x=df["EPOCH"], y=df[" TEST_LOSS"], color="teal", ax=ax_subpanel)
-            ax_subpanel.set_xlim(ZOOM_EPOCHS_INTERVAL)
-            ax_subpanel.set_ylim([0, 0.1])
-            ax_subpanel.set_xlabel('')
-            ax_subpanel.set_ylabel('')
+        ax_subpanel = inset_axes(ax, width="50%", height="25%", loc="center right")
+        sns.lineplot(x=df["EPOCH"], y=df[" TRAIN_LOSS"], linestyle="dashed", color="red", ax=ax_subpanel)
+        sns.lineplot(x=df["EPOCH"], y=df[" TEST_LOSS"], color="teal", ax=ax_subpanel)
+        ax_subpanel.set_xlim(ZOOM_EPOCHS_INTERVAL)
+        ax_subpanel.set_ylim([0, 0.1])
+        ax_subpanel.set_xlabel('')
+        ax_subpanel.set_ylabel('')
 
     # ===============================================================
-    supfigtitle = "%s Train/Dev loss curves (RND: %d -B:%d - LR:%s) - %s" % (
+    supfigtitle = "%s Train/Dev loss curves (RND: %d -B: %d - LR: %s) - %s" % (
                 _picker, RND, BATCH, LR, TRAINNAME)
     plt.suptitle(supfigtitle, fontweight='bold', fontsize=18, fontname="Lato")
-    # plt.tight_layout()
+    plt.tight_layout()
     fig.savefig(str(STORE_DIR / ("TrainTest_CURVES_%s.pdf" % _picker)))
 
 print("DONE")
