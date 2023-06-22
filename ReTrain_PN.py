@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 import os
+import pickle
 import argparse
+from pprint import pprint
 import matplotlib.pyplot as plt
 from pathlib import Path
 
@@ -10,6 +12,7 @@ import seisbench as sb
 import seisbench.models as sbm
 
 import dkpn.train as dktrain
+
 
 print(" SB version:  %s" % sb.__version__)
 print("OBS version:  %s" % obspy.__version__)
@@ -52,6 +55,7 @@ print("")
 print(f"EARLY STOP: {args.early_stop}")
 print(f"  PATIENCE: {args.patience}")
 print(f"     DELTA: {args.delta}")
+print("")
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
@@ -67,7 +71,6 @@ train, dev, test = dataset_train.train_dev_test()
 print("TRAIN samples %s:  %d" % (args.dataset_name, len(train)))
 print("  DEV samples %s:  %d" % (args.dataset_name, len(dev)))
 print(" TEST samples %s:  %d" % (args.dataset_name, len(test)))
-
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
@@ -115,13 +118,15 @@ TRAIN_CLASS = dktrain.TrainHelp_PhaseNet(
 # --------------->    ACTUAL TRAINING  <---------------
 
 if args.early_stop:
-    train_loss_epochs, dev_loss_epochs = TRAIN_CLASS.train_me_early_stop(
+    (train_loss_epochs, train_loss_epochs_batches,
+     dev_loss_epochs, dev_loss_epochs_batches) = TRAIN_CLASS.train_me_early_stop(
         epochs=args.epochs, optimizer_type="adam",
         learning_rate=args.learning_rate,
         patience=args.patience, delta=args.delta)
 
 else:
-    train_loss_epochs, dev_loss_epochs = TRAIN_CLASS.train_me(
+    (train_loss_epochs, train_loss_epochs_batches,
+     dev_loss_epochs, dev_loss_epochs_batches) = TRAIN_CLASS.train_me(
         epochs=args.epochs, optimizer_type="adam",
         learning_rate=args.learning_rate)
 
@@ -144,12 +149,27 @@ if not STORE_DIR_MODEL.is_dir():
 TRAIN_CLASS.store_weigths(STORE_DIR_MODEL, MODEL_NAME, MODEL_NAME, version="1")
 
 # ----------------------------------------------------------------------------
-# --------------->    STORE   TABLE    <---------------
+# --------------->    STORE   LOSS  TABLE    <---------------
 
 with open(str(STORE_DIR_MODEL / "TRAIN_TEST_loss.csv"), "w") as OUT:
     OUT.write("EPOCH, TRAIN_LOSS, TEST_LOSS"+os.linesep)
     for xx, (trn, tst) in enumerate(zip(train_loss_epochs, dev_loss_epochs)):
         OUT.write(("%d, %.4f, %.4f"+os.linesep) % (xx, trn, tst))
+
+# ----------------------------------------------------------------------------
+# --------------->    STORE   LOSS  PICKLE    <---------------
+
+TRAIN_LOSSES = []
+for xx, (av_loss, batch_loss) in enumerate(zip(train_loss_epochs, train_loss_epochs_batches)):
+    TRAIN_LOSSES.append((av_loss, batch_loss))
+with open(str(STORE_DIR_MODEL / 'TRAIN_loss_batches.pickle'), 'wb') as file:
+    pickle.dump(TRAIN_LOSSES, file)
+
+DEV_LOSSES = []
+for xx, (av_loss, batch_loss) in enumerate(zip(dev_loss_epochs, dev_loss_epochs_batches)):
+    DEV_LOSSES.append((av_loss, batch_loss))
+with open(str(STORE_DIR_MODEL / 'DEV_loss_batches.pickle'), 'wb') as file:
+    pickle.dump(DEV_LOSSES, file)
 
 # ----------------------------------------------------------------------------
 # --------------->    STORE   PARAMETERS    <---------------

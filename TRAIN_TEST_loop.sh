@@ -18,17 +18,17 @@ conda activate sometools_SBupdated
 # =================================================================
 
 
-# TRAINDATA="INSTANCE"
-# TESTDATA_INDOMAIN="INSTANCE"
-# TESTDATA_CROSSDOMAIN="ETHZ"
-# SIZES=("NANO3" "NANO2" "NANO1" "NANO" "MICRO" "TINY" "SMALL" "MEDIUM" "LARGE")  # INSTANCE
-# EPOCHS=("20" "20" "20" "20" "20" "20" "20" "20" "20")  # INSTANCE
+TRAINDATA="INSTANCE"
+TESTDATA_INDOMAIN="INSTANCE"
+TESTDATA_CROSSDOMAIN="ETHZ"
+SIZES=("NANO3" "NANO2" "NANO1" "NANO" "MICRO" "TINY" "SMALL" "MEDIUM" "LARGE")  # INSTANCE
+EPOCHS=("100" "100" "100" "100" "100" "100" "100" "100" "100")  # INSTANCE
 
-TRAINDATA="ETHZ"
-TESTDATA_INDOMAIN="ETHZ"
-TESTDATA_CROSSDOMAIN="INSTANCE"
-SIZES=("NANO3" "NANO2" "NANO1" "NANO" "MICRO" "TINY")  # ETHZ
-EPOCHS=("80" "80" "80" "80" "80" "80")                # ETHZ
+# TRAINDATA="ETHZ"
+# TESTDATA_INDOMAIN="ETHZ"
+# TESTDATA_CROSSDOMAIN="INSTANCE"
+# SIZES=("NANO3" "NANO2" "NANO1" "NANO" "MICRO" "TINY")  # ETHZ
+# EPOCHS=("80" "80" "80" "80" "80" "80")                # ETHZ
 
 # Loop over the array
 length=${#SIZES[@]}  # Get the length of the array
@@ -45,13 +45,13 @@ for ((i=0; i<length; i++)); do
   ./ReTrain_DKPN.py -d ${TRAINDATA} -s ${DATASIZE} -r ${RND} \
                     -e ${EPOCHSNUM} -b ${BATCH} -l ${LR} \
                     -o DKPN_TrainDataset_${TRAINDATA}_Size_${DATASIZE}_Rnd_${RND}_LR_${LR}_Batch_${BATCH} \
-                    --early_stop -x 3 -y 0.001
+                    --early_stop -x 5 -y 0.0001
   echo ""
   echo "... Training PhaseNet"
   ./ReTrain_PN.py -d ${TRAINDATA} -s ${DATASIZE} -r ${RND} \
                   -e ${EPOCHSNUM} -b ${BATCH} -l ${LR} \
                   -o PN_TrainDataset_${TRAINDATA}_Size_${DATASIZE}_Rnd_${RND}_LR_${LR}_Batch_${BATCH} \
-                  --early_stop -x 3 -y 0.001
+                  --early_stop -x 5 -y 0.0001
 
   # --- In-Domain  TEST
   echo ""

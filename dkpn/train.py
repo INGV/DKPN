@@ -419,12 +419,14 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
     def __train_loop__(self, optimizer):
         size = len(self.train_loader.dataset)
         train_loss = 0
+        train_loss_batches = []
         for batch_id, batch in enumerate(self.train_loader):
             # Compute prediction and loss
             pred = self.dkpnmod(batch["X"].to(
                                         self.dkpnmod.device))
             loss = self.__loss_fn__(pred, batch["y"].to(
                                         self.dkpnmod.device))
+            train_loss_batches.append(loss.item())
             train_loss += loss
 
             # Backpropagation
@@ -436,12 +438,13 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
                 loss_val, current = loss.item(), batch_id * batch["X"].shape[0]
                 print(f"loss: {loss_val:>7f}  [{current:>5d}/{size:>5d}]")
 
-        return loss.item()
+        return (loss.item(), train_loss_batches)
 
     def __test_loop__(self):
 
         num_batches = len(self.dev_loader)
         test_loss = 0
+        test_loss_batches = []
 
         self.dkpnmod.eval()  # 20230524
 
@@ -449,14 +452,17 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
             for batch in self.dev_loader:
                 pred = self.dkpnmod(batch["X"].to(
                                 self.dkpnmod.device))
-                test_loss += self.__loss_fn__(pred, batch["y"].to(
+                _tlb = self.__loss_fn__(pred, batch["y"].to(
                                 self.dkpnmod.device)).item()
+                #
+                test_loss += _tlb
+                test_loss_batches.append(_tlb)
 
         self.dkpnmod.train()  # 20230524
 
         test_loss /= num_batches
         print(f"Dev. avg loss: {test_loss:>8f}\n")
-        return test_loss
+        return (test_loss, test_loss_batches)
 
     def train_me(self,
                  # Train related
@@ -475,19 +481,24 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
                              "is supported!")
 
         # ------------------------ GO
-        train_loss_epochs, test_loss_epochs = [], []
+        train_loss_epochs, train_loss_epochs_batches = [], []
+        test_loss_epochs, test_loss_epochs_batches = [], []
 
         for t in range(epochs):
             print(f"Epoch {t+1}\n-------------------------------")
 
-            _train_loss = self.__train_loop__(optimizer=optim)
+            (_train_loss, _train_loss_batches) = self.__train_loop__(
+                                                            optimizer=optim)
             train_loss_epochs.append(_train_loss)
+            train_loss_epochs_batches.append(_train_loss_batches)
 
-            _test_loss = self.__test_loop__()
+            (_test_loss, _test_loss_batches) = self.__test_loop__()
             test_loss_epochs.append(_test_loss)
+            test_loss_epochs_batches.append(_test_loss_batches)
         #
         self.__training_epochs__ = t+1
-        return (train_loss_epochs, test_loss_epochs)
+        return (train_loss_epochs, train_loss_epochs_batches,
+                test_loss_epochs, test_loss_epochs_batches)
 
     def train_me_early_stop(
                 self,
@@ -508,18 +519,23 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
                              "is supported!")
 
         # ------------------------ GO
-        train_loss_epochs, test_loss_epochs = [], []
+        train_loss_epochs, train_loss_epochs_batches = [], []
+        test_loss_epochs, test_loss_epochs_batches = [], []
 
         losses = []  # track losses for the last 'patience' epochs
 
         for t in range(epochs):
             print(f"Epoch {t+1}\n-------------------------------")
 
-            _train_loss = self.__train_loop__(optimizer=optim)
+            (_train_loss, _train_loss_batches) = self.__train_loop__(
+                                                            optimizer=optim)
             train_loss_epochs.append(_train_loss)
+            train_loss_epochs_batches.append(_train_loss_batches)
 
-            _test_loss = self.__test_loop__()
+            (_test_loss, _test_loss_batches) = self.__test_loop__()
             test_loss_epochs.append(_test_loss)
+            test_loss_epochs_batches.append(_test_loss_batches)
+
             losses.append(_test_loss)
 
             # If we have more than 'patience' epochs done,
@@ -535,7 +551,8 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
                     break
         #
         self.__training_epochs__ = t+1
-        return (train_loss_epochs, test_loss_epochs)
+        return (train_loss_epochs, train_loss_epochs_batches,
+                test_loss_epochs, test_loss_epochs_batches)
 
     def store_weigths(self, dir_path, model_name, jsonstring, version="1"):
         """ Store the finals """
@@ -757,12 +774,14 @@ class TrainHelp_PhaseNet(object):
     def __train_loop__(self, optimizer):
         size = len(self.train_loader.dataset)
         train_loss = 0
+        train_loss_batches = []
         for batch_id, batch in enumerate(self.train_loader):
             # Compute prediction and loss
             pred = self.pnmod(batch["X"].to(
                                         self.pnmod.device))
             loss = self.__loss_fn__(pred, batch["y"].to(
                                         self.pnmod.device))
+            train_loss_batches.append(loss.item())
             train_loss += loss
 
             # Backpropagation
@@ -774,12 +793,13 @@ class TrainHelp_PhaseNet(object):
                 loss_val, current = loss.item(), batch_id * batch["X"].shape[0]
                 print(f"loss: {loss_val:>7f}  [{current:>5d}/{size:>5d}]")
 
-        return loss.item()
+        return (loss.item(), train_loss_batches)
 
     def __test_loop__(self):
 
         num_batches = len(self.dev_loader)
         test_loss = 0
+        test_loss_batches = []
 
         self.pnmod.eval()  # 20230524
 
@@ -787,14 +807,17 @@ class TrainHelp_PhaseNet(object):
             for batch in self.dev_loader:
                 pred = self.pnmod(batch["X"].to(
                                 self.pnmod.device))
-                test_loss += self.__loss_fn__(pred, batch["y"].to(
+                _tlb = self.__loss_fn__(pred, batch["y"].to(
                                 self.pnmod.device)).item()
+
+                test_loss += _tlb
+                test_loss_batches.append(_tlb)
 
         self.pnmod.train()  # 20230524
 
         test_loss /= num_batches
         print(f"Dev. avg loss: {test_loss:>8f}\n")
-        return test_loss
+        return (test_loss, test_loss_batches)
 
     def train_me(self,
                  # Train related
@@ -813,19 +836,24 @@ class TrainHelp_PhaseNet(object):
                              "is supported!")
 
         # ------------------------ GO
-        train_loss_epochs, test_loss_epochs = [], []
+        train_loss_epochs, train_loss_epochs_batches = [], []
+        test_loss_epochs, test_loss_epochs_batches = [], []
 
         for t in range(epochs):
             print(f"Epoch {t+1}\n-------------------------------")
 
-            _train_loss = self.__train_loop__(optimizer=optim)
+            (_train_loss, _train_loss_batches) = self.__train_loop__(
+                                                            optimizer=optim)
             train_loss_epochs.append(_train_loss)
+            train_loss_epochs_batches.append(_train_loss_batches)
 
-            _test_loss = self.__test_loop__()
+            (_test_loss, _test_loss_batches) = self.__test_loop__()
             test_loss_epochs.append(_test_loss)
+            test_loss_epochs_batches.append(_test_loss_batches)
         #
         self.__training_epochs__ = t+1
-        return (train_loss_epochs, test_loss_epochs)
+        return (train_loss_epochs, train_loss_epochs_batches,
+                test_loss_epochs, test_loss_epochs_batches)
 
     def train_me_early_stop(
                 self,
@@ -846,18 +874,23 @@ class TrainHelp_PhaseNet(object):
                              "is supported!")
 
         # ------------------------ GO
-        train_loss_epochs, test_loss_epochs = [], []
+        train_loss_epochs, train_loss_epochs_batches = [], []
+        test_loss_epochs, test_loss_epochs_batches = [], []
 
         losses = []  # track losses for the last 'patience' epochs
 
         for t in range(epochs):
             print(f"Epoch {t+1}\n-------------------------------")
 
-            _train_loss = self.__train_loop__(optimizer=optim)
+            (_train_loss, _train_loss_batches) = self.__train_loop__(
+                                                            optimizer=optim)
             train_loss_epochs.append(_train_loss)
+            train_loss_epochs_batches.append(_train_loss_batches)
 
-            _test_loss = self.__test_loop__()
+            (_test_loss, _test_loss_batches) = self.__test_loop__()
             test_loss_epochs.append(_test_loss)
+            test_loss_epochs_batches.append(_test_loss_batches)
+
             losses.append(_test_loss)
 
             # If we have more than 'patience' epochs done,
@@ -873,7 +906,8 @@ class TrainHelp_PhaseNet(object):
                     break
         #
         self.__training_epochs__ = t+1
-        return (train_loss_epochs, test_loss_epochs)
+        return (train_loss_epochs, train_loss_epochs_batches,
+                test_loss_epochs, test_loss_epochs_batches)
 
     def store_weigths(self, dir_path, model_name, jsonstring, version="1"):
         """ Store the finals """
