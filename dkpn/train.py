@@ -365,9 +365,6 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
         rw_high = windowlen
 
         augmentations_list = [
-                sbg.Normalize(demean_axis=-1,
-                              amp_norm_axis=None,
-                              amp_norm_type=kwargs["amp_norm_type"]),
                 sbg.WindowAroundSample(list(kwargs["phase_dict"].keys()),
                                        samples_before=windowlen/2,
                                        windowlen=windowlen,
@@ -377,6 +374,10 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
                 sbg.RandomWindow(windowlen=rw_windowlen,
                                  low=rw_low, high=rw_high,
                                  strategy=kwargs["window_strategy"]),
+
+                sbg.Normalize(demean_axis=-1,
+                              amp_norm_axis=None,
+                              amp_norm_type=kwargs["amp_norm_type"]),
 
                 sbg.ProbabilisticLabeller(label_columns=kwargs["phase_dict"], 
                                           sigma=kwargs["sigma"], dim=0),
@@ -726,9 +727,6 @@ class TrainHelp_PhaseNet(object):
         rw_high = windowlen
 
         augmentations_list = [
-                sbg.Normalize(demean_axis=-1,
-                              amp_norm_axis=None,
-                              amp_norm_type=kwargs["amp_norm_type"]),
                 sbg.WindowAroundSample(list(kwargs["phase_dict"].keys()),
                                        samples_before=windowlen/2,
                                        windowlen=windowlen,
@@ -738,10 +736,16 @@ class TrainHelp_PhaseNet(object):
                 sbg.RandomWindow(windowlen=rw_windowlen,
                                  low=rw_low, high=rw_high,
                                  strategy=kwargs["window_strategy"]),
+
                 sbg.FixedWindow(windowlen=kwargs["final_windowlength"],
                                 p0=kwargs["fp_stabilization"],
                                 strategy=kwargs["window_strategy"]),
-                sbg.ProbabilisticLabeller(label_columns=kwargs["phase_dict"], 
+
+                sbg.Normalize(demean_axis=-1,
+                              amp_norm_axis=None,
+                              amp_norm_type=kwargs["amp_norm_type"]),
+
+                sbg.ProbabilisticLabeller(label_columns=kwargs["phase_dict"],
                                           sigma=kwargs["sigma"], dim=0),
 
                 sbg.ChangeDtype(np.float32, key="X"),
