@@ -11,7 +11,8 @@ sns.set(style="darkgrid")
 TRAINNAME = sys.argv[1]
 TESTNAME = sys.argv[2]
 
-X_LABELS = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY"]
+X_LABELS = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY",
+            "SMALL", "MEDIUM", "LARGE"]
 
 # =================================================
 # =================================================

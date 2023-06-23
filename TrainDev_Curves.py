@@ -16,7 +16,8 @@ if not STORE_DIR.is_dir():
     STORE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-order = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY", "SMALL", "MEDIUM", "LARGE"]
+order = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY",
+         "SMALL", "MEDIUM", "LARGE"]
 
 # =================================================
 # =================================================
@@ -89,9 +90,9 @@ for _picker in ("DKPN", "PN"):
 
         # min/max train-loss
         sns.lineplot(x=df["EPOCH"], y=[_l[0] for _l in __extract_min_max_batch_losses__(_train_bloss)],
-                     color="gray", ax=ax, alpha=0.3)
+                     color="darkgray", ax=ax)  # alpha=0.7
         sns.lineplot(x=df["EPOCH"], y=[_l[1] for _l in __extract_min_max_batch_losses__(_train_bloss)],
-                     color="gray", ax=ax, alpha=0.3)
+                     color="darkgray", ax=ax)  # alpha=0.7
         sns.lineplot(x=df["EPOCH"], y=df[" TRAIN_LOSS"], linestyle="dashed",
                      label="Train", color="red", ax=ax)
         sns.lineplot(x=df["EPOCH"], y=df[" TEST_LOSS"],
@@ -115,9 +116,9 @@ for _picker in ("DKPN", "PN"):
 
         # min/max train-loss
         sns.lineplot(x=df["EPOCH"], y=[_l[0] for _l in __extract_min_max_batch_losses__(_train_bloss)],
-                     color="gray", ax=ax, alpha=0.3)
+                     color="darkgray", ax=ax_subpanel)  # alpha=0.7
         sns.lineplot(x=df["EPOCH"], y=[_l[1] for _l in __extract_min_max_batch_losses__(_train_bloss)],
-                     color="gray", ax=ax,alpha=0.3)
+                     color="darkgray", ax=ax_subpanel)
         sns.lineplot(x=df["EPOCH"], y=df[" TRAIN_LOSS"], linestyle="dashed", color="red", ax=ax_subpanel)
         sns.lineplot(x=df["EPOCH"], y=df[" TEST_LOSS"], color="teal", ax=ax_subpanel)
 

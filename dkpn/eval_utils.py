@@ -27,30 +27,32 @@ def extract_picks(ts, smooth=True, thr=0.2, min_distance=50):
 
 
 def compare_picks(peaks_model, peaks_ref, stats_dict, thr=25):
-
     residuals = []
     stats_dict["TOTAL"] += len(peaks_ref)
     matches = []  # ... keeping track of matches
 
     # First, we find TP and the corresponding matches
-    for pm in peaks_model:
-        for pf in peaks_ref:
+    matched_model_peaks = set()  # Keep track of model peaks that have been matched
+    for pf in peaks_ref:
+        match_found = False
+        for pm in peaks_model:
+            if pm in matched_model_peaks:
+                continue  # Skip model peaks that have already been matched
             if abs(pm - pf) <= thr:
                 residuals.append(pm - pf)
                 stats_dict["TP"] += 1
                 matches.append((pm, pf))  # Save the match
-                break  # Once we found a match, no need to check other pf for this pm
+                matched_model_peaks.add(pm)
+                match_found = True
+                break  # Once we found a match, no need to check other pm for this pf
+        if not match_found:
+            stats_dict["FN"] += 1
 
     # Now, we find FP. If a pm is not in the matches, it's a FP
     for pm in peaks_model:
         if pm not in [m[0] for m in matches]:
             stats_dict["FP"] += 1
 
-    # Lastly, we find FN. If a pf is not in the matches, it's a FN
-    for pf in peaks_ref:
-        if pf not in [m[1] for m in matches]:
-            stats_dict["FN"] += 1
-    #
     return (stats_dict, residuals)
 
 
