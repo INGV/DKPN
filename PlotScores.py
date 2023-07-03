@@ -10,6 +10,7 @@ sns.set(style="darkgrid")
 
 TRAINNAME = sys.argv[1]
 TESTNAME = sys.argv[2]
+THRVAL = sys.argv[3]
 
 X_LABELS = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY",
             "SMALL", "MEDIUM", "LARGE"]
@@ -27,23 +28,23 @@ if not STORE_DIR.is_dir():
 # =================================================
 
 DKPN_SCORES = {}
-pickles_DKPN = Path(".").glob("Results_%s_%s_*/results_DKPN.pickle" % (
-                               TRAINNAME, TESTNAME))
+pickles_DKPN = Path(".").glob("Results_%s_%s_*_%s/results_DKPN.pickle" % (
+                               TRAINNAME, TESTNAME, THRVAL))
 
 for pp in pickles_DKPN:
     pp = str(pp)
-    SIZE = pp.split("/")[0].split("_")[-1]
+    SIZE = pp.split("/")[0].split("_")[3]
     # Load the pickle file
     with open(pp, 'rb') as file:
         loaded_data = pickle.load(file)
     DKPN_SCORES[SIZE] = loaded_data
 
 PN_SCORES = {}
-pickles_PN = Path(".").glob("Results_%s_%s_*/results_PN.pickle" % (
-                               TRAINNAME, TESTNAME))
+pickles_PN = Path(".").glob("Results_%s_%s_*_%s/results_PN.pickle" % (
+                               TRAINNAME, TESTNAME, THRVAL))
 for pp in pickles_PN:
     pp = str(pp)
-    SIZE = pp.split("/")[0].split("_")[-1]
+    SIZE = pp.split("/")[0].split("_")[3]
     # Load the pickle file
     with open(pp, 'rb') as file:
         loaded_data = pickle.load(file)
@@ -117,7 +118,8 @@ for i, values in enumerate(VALUES_DKPN):
                  ax=ax, color=color_list[i])
 
 # --- Decorator
-ax.set_ylim([0, 1])
+# ax.set_ylim([0, 1])
+ax.set_ylim([0.7, 1])
 ax.set_xlabel('train size', fontstyle='italic', fontsize=14, fontname="Lato")
 ax.set_ylabel('value', fontstyle='italic', fontsize=14, fontname="Lato")
 ax.set_title('P-SCORES', fontstyle='italic', fontsize=16, fontname="Lato")   # Set the title of the plot
@@ -169,7 +171,8 @@ for i, values in enumerate(VALUES_DKPN):
                  ax=ax, color=color_list[i])
 
 # --- Decorator
-ax.set_ylim([0, 1])
+# ax.set_ylim([0, 1])
+ax.set_ylim([0.3, 1])
 ax.set_xlabel('train size', fontstyle='italic', fontsize=14, fontname="Lato")
 ax.set_ylabel('value', fontstyle='italic', fontsize=14, fontname="Lato")
 ax.set_title('S-SCORES', fontstyle='italic', fontsize=16, fontname="Lato")   # Set the title of the plot
@@ -181,6 +184,6 @@ plt.suptitle("%s Training - %s Testing" % (TRAINNAME, TESTNAME),
              fontweight='bold', fontsize=18, fontname="Lato")  #fontfamily='sans-serif')
 plt.tight_layout()  # Adjust the spacing between subplots
 fig.savefig(str(
-        STORE_DIR / ("ScoresResults_%s_%s.pdf" % (TRAINNAME, TESTNAME))
+        STORE_DIR / ("ScoresResults_%s_%s_%s.pdf" % (TRAINNAME, TESTNAME, THRVAL))
     )
 )

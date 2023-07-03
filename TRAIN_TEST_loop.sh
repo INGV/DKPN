@@ -1,7 +1,7 @@
 #!/bin/bash
 
-RND="42"
-BATCH="32"
+RND="777"
+BATCH="64"
 LR="0.0010"   # Must be a %.04f FORMAT!
 
 # =================================================================
@@ -28,7 +28,7 @@ EPOCHS=("100" "100" "100" "100" "100" "100" "100" "100" "100")  # INSTANCE
 # TESTDATA_INDOMAIN="ETHZ"
 # TESTDATA_CROSSDOMAIN="INSTANCE"
 # SIZES=("NANO3" "NANO2" "NANO1" "NANO" "MICRO" "TINY")  # ETHZ
-# EPOCHS=("80" "80" "80" "80" "80" "80")                # ETHZ
+# EPOCHS=("100" "100" "100" "100" "100" "100")  # ETHZ
 
 # Loop over the array
 length=${#SIZES[@]}  # Get the length of the array
@@ -60,7 +60,12 @@ for ((i=0; i<length; i++)); do
                          -p PN_TrainDataset_${TRAINDATA}_Size_${DATASIZE}_Rnd_${RND}_LR_${LR}_Batch_${BATCH} \
                          -d ${TESTDATA_INDOMAIN} -s ${DATASIZE} \
                          -x 0.2 -y 0.2 -n 5000 -f 10 -a 10 -b 20 \
-                         -o Results_${TRAINDATA}_${TRAINDATA}_${DATASIZE}
+                         -o Results_${TRAINDATA}_${TRAINDATA}_${DATASIZE}_02
+  ./LoadEvaluate_DKPN.py -k DKPN_TrainDataset_${TRAINDATA}_Size_${DATASIZE}_Rnd_${RND}_LR_${LR}_Batch_${BATCH} \
+                         -p PN_TrainDataset_${TRAINDATA}_Size_${DATASIZE}_Rnd_${RND}_LR_${LR}_Batch_${BATCH} \
+                         -d ${TESTDATA_INDOMAIN} -s ${DATASIZE} \
+                         -x 0.5 -y 0.5 -n 5000 -f 10 -a 10 -b 20 \
+                         -o Results_${TRAINDATA}_${TRAINDATA}_${DATASIZE}_05
 
   # --- Cross-Domain  TEST
   echo ""
@@ -69,7 +74,12 @@ for ((i=0; i<length; i++)); do
                          -p PN_TrainDataset_${TRAINDATA}_Size_${DATASIZE}_Rnd_${RND}_LR_${LR}_Batch_${BATCH} \
                          -d ${TESTDATA_CROSSDOMAIN} -s ${DATASIZE} \
                          -x 0.2 -y 0.2 -n 5000 -f 10 -a 10 -b 20 \
-                         -o Results_${TRAINDATA}_${TESTDATA_CROSSDOMAIN}_${DATASIZE}
+                         -o Results_${TRAINDATA}_${TESTDATA_CROSSDOMAIN}_${DATASIZE}_02
+  ./LoadEvaluate_DKPN.py -k DKPN_TrainDataset_${TRAINDATA}_Size_${DATASIZE}_Rnd_${RND}_LR_${LR}_Batch_${BATCH} \
+                         -p PN_TrainDataset_${TRAINDATA}_Size_${DATASIZE}_Rnd_${RND}_LR_${LR}_Batch_${BATCH} \
+                         -d ${TESTDATA_CROSSDOMAIN} -s ${DATASIZE} \
+                         -x 0.5 -y 0.5 -n 5000 -f 10 -a 10 -b 20 \
+                         -o Results_${TRAINDATA}_${TESTDATA_CROSSDOMAIN}_${DATASIZE}_05
 
 done
 

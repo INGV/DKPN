@@ -338,7 +338,7 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
                                      shuffle=True, num_workers=num_workers,
                                      worker_init_fn=self.__worker_init_fn_seed__)
         self.test_loader = DataLoader(self.test_generator, batch_size=batch_size,
-                                      shuffle=True, num_workers=num_workers,
+                                      shuffle=False, num_workers=num_workers,
                                       worker_init_fn=self.__worker_init_fn_seed__)
 
     def __worker_init_fn_seed__(self, wid):
@@ -376,7 +376,7 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
                                  strategy=kwargs["window_strategy"]),
 
                 sbg.Normalize(demean_axis=-1,
-                              amp_norm_axis=None,
+                              amp_norm_axis=-1,
                               amp_norm_type=kwargs["amp_norm_type"]),
 
                 sbg.ProbabilisticLabeller(label_columns=kwargs["phase_dict"], 
@@ -539,16 +539,18 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
 
             losses.append(_test_loss)
 
-            # If we have more than 'patience' epochs done,
+            # If we have more than '2*patience' epochs done,
             # we can start checking for early stopping
-            if t >= patience:
+            if t >= 2 * patience:
                 # Calculate improvement in the last 'patience' epochs
-                improvement = (test_loss_epochs[-patience-1] -
-                               np.mean(test_loss_epochs[-patience:]))
+                mean_loss_before = np.mean(test_loss_epochs[-2*patience:-patience-1])
+                mean_loss_current = np.mean(test_loss_epochs[-patience:])
+                improvement = mean_loss_before - mean_loss_current
+                print("Early stopping: mean_loss_before %7f mean_loss_current %7f improvement %7f" % (mean_loss_before, mean_loss_current, improvement))
 
                 # If improvement is less than 'delta', stop the training
                 if improvement < delta:
-                    print("Early stopping triggered! - EPOCH:  %d" % (t+1))
+                    print("Early stopping triggered! - EPOCH:  %d  (mean_loss_before %7f mean_loss_current %7f improvement %7f)" % (t+1, mean_loss_before, mean_loss_current, improvement))
                     break
         #
         self.__training_epochs__ = t+1
@@ -691,7 +693,7 @@ class TrainHelp_PhaseNet(object):
                                      shuffle=True, num_workers=num_workers,
                                      worker_init_fn=self.__worker_init_fn_seed__)
         self.test_loader = DataLoader(self.test_generator, batch_size=batch_size,
-                                      shuffle=True, num_workers=num_workers,
+                                      shuffle=False, num_workers=num_workers,
                                       worker_init_fn=self.__worker_init_fn_seed__)
 
     def set_random_seed(self, rndseed):
@@ -742,7 +744,7 @@ class TrainHelp_PhaseNet(object):
                                 strategy=kwargs["window_strategy"]),
 
                 sbg.Normalize(demean_axis=-1,
-                              amp_norm_axis=None,
+                              amp_norm_axis=-1,
                               amp_norm_type=kwargs["amp_norm_type"]),
 
                 sbg.ProbabilisticLabeller(label_columns=kwargs["phase_dict"],
@@ -897,16 +899,18 @@ class TrainHelp_PhaseNet(object):
 
             losses.append(_test_loss)
 
-            # If we have more than 'patience' epochs done,
+            # If we have more than '2*patience' epochs done,
             # we can start checking for early stopping
-            if t >= patience:
+            if t >= 2 * patience:
                 # Calculate improvement in the last 'patience' epochs
-                improvement = (test_loss_epochs[-patience-1] -
-                               np.mean(test_loss_epochs[-patience:]))
+                mean_loss_before = np.mean(test_loss_epochs[-2*patience:-patience-1])
+                mean_loss_current = np.mean(test_loss_epochs[-patience:])
+                improvement = mean_loss_before - mean_loss_current
+                print("Early stopping: mean_loss_before %7f mean_loss_current %7f improvement %7f" % (mean_loss_before, mean_loss_current, improvement))
 
                 # If improvement is less than 'delta', stop the training
                 if improvement < delta:
-                    print("Early stopping triggered! - EPOCH:  %d" % (t+1))
+                    print("Early stopping triggered! - EPOCH:  %d  (mean_loss_before %7f mean_loss_current %7f improvement %7f)" % (t+1, mean_loss_before, mean_loss_current, improvement))
                     break
         #
         self.__training_epochs__ = t+1
