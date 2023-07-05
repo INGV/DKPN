@@ -6,9 +6,9 @@ Final version to be fully embedded in SeisBench.
 Following this issue `https://github.com/seisbench/seisbench/issues/151#issuecomment-1356723017`,
 we may now switch to the original TensorFlow implemetnation of PN
 
-VERSION: _0.3.1_
+VERSION: _0.4.5_
 
-DATE: _06.2023_
+DATE: _07.2023_
 
 This version is the first fully fledged, stable release to be used
 in combination with `SeisBench (v0.3.0)`. When you install the package (with pip)
