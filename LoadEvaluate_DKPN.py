@@ -173,9 +173,11 @@ do_stats_on = [# (dev_generator_dkpn, "DEV_DKPN", "DEV_PN"),
                (test_generator_dkpn, "TEST_DKPN", "TEST_PN"),
                    ]
 
-dkpn_p_pick_residuals, dkpn_s_pick_residuals = [], []
-pn_p_pick_residuals, pn_s_pick_residuals = [], []
-
+dkpn_p_pick_residuals_tp, dkpn_s_pick_residuals_tp = [], []
+pn_p_pick_residuals_tp, pn_s_pick_residuals_tp = [], []
+#
+dkpn_p_pick_residuals_fp, dkpn_s_pick_residuals_fp = [], []
+pn_p_pick_residuals_fp, pn_s_pick_residuals_fp = [], []
 
 for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
 
@@ -216,7 +218,7 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
                                                         smooth=True,
                                                         thr=args.pickthreshold_p)
 
-        (DKPN_stats_dict_P, DKPN_residual_TP_P) = EV.compare_picks(
+        (DKPN_stats_dict_P, DKPN_residual_TP_P, DKPN_residual_FP_P) = EV.compare_picks(
                                           DKPN_P_picks_model, 
                                           DKPN_P_picks_label, 
                                           DKPN_stats_dict_P,
@@ -231,14 +233,16 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
                                                         smooth=True,
                                                         thr=args.pickthreshold_s)
 
-        (DKPN_stats_dict_S, DKPN_residual_TP_S) = EV.compare_picks(
+        (DKPN_stats_dict_S, DKPN_residual_TP_S, DKPN_residual_FP_S) = EV.compare_picks(
                                           DKPN_S_picks_model, 
                                           DKPN_S_picks_label, 
                                           DKPN_stats_dict_S,
                                           thr=args.truepositive_s)
 
-        dkpn_p_pick_residuals.extend(DKPN_residual_TP_P)
-        dkpn_s_pick_residuals.extend(DKPN_residual_TP_S)
+        dkpn_p_pick_residuals_tp.extend(DKPN_residual_TP_P)
+        dkpn_s_pick_residuals_tp.extend(DKPN_residual_TP_S)
+        dkpn_p_pick_residuals_fp.extend(DKPN_residual_FP_P)
+        dkpn_s_pick_residuals_fp.extend(DKPN_residual_FP_S)
 
         # ------------------------------------------------------------
         # ----------------- Do STATISTICS PN
@@ -253,7 +257,7 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
                                                         smooth=True,
                                                         thr=args.pickthreshold_p)
 
-        (PN_stats_dict_P, PN_residual_TP_P) = EV.compare_picks(
+        (PN_stats_dict_P, PN_residual_TP_P, PN_residual_FP_P) = EV.compare_picks(
                                         PN_P_picks_model, 
                                         PN_P_picks_label, 
                                         PN_stats_dict_P,
@@ -268,14 +272,16 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
                                                         smooth=True,
                                                         thr=args.pickthreshold_s)
 
-        (PN_stats_dict_S, PN_residual_TP_S) = EV.compare_picks(
+        (PN_stats_dict_S, PN_residual_TP_S, PN_residual_FP_S) = EV.compare_picks(
                                         PN_S_picks_model, 
                                         PN_S_picks_label,
                                         PN_stats_dict_S,
                                         thr=args.truepositive_s)
 
-        pn_p_pick_residuals.extend(PN_residual_TP_P)
-        pn_s_pick_residuals.extend(PN_residual_TP_S)
+        pn_p_pick_residuals_tp.extend(PN_residual_TP_P)
+        pn_s_pick_residuals_tp.extend(PN_residual_TP_S)
+        pn_p_pick_residuals_fp.extend(PN_residual_FP_P)
+        pn_s_pick_residuals_fp.extend(PN_residual_FP_S)
 
         # ------------------------------------------------------------
         # ----------------- PLOTS
@@ -301,10 +307,15 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         figureidx += 1
     
     # Convert list of residuals, into numpy array of seconds
-    dkpn_p_pick_residuals = np.array(dkpn_p_pick_residuals)*0.01
-    dkpn_s_pick_residuals = np.array(dkpn_s_pick_residuals)*0.01
-    pn_p_pick_residuals = np.array(pn_p_pick_residuals)*0.01
-    pn_s_pick_residuals = np.array(pn_s_pick_residuals)*0.01
+    dkpn_p_pick_residuals_tp = np.array(dkpn_p_pick_residuals_tp)*0.01
+    dkpn_s_pick_residuals_tp = np.array(dkpn_s_pick_residuals_tp)*0.01
+    dkpn_p_pick_residuals_fp = np.array(dkpn_p_pick_residuals_fp)*0.01
+    dkpn_s_pick_residuals_fp = np.array(dkpn_s_pick_residuals_fp)*0.01
+
+    pn_p_pick_residuals_tp = np.array(pn_p_pick_residuals_tp)*0.01
+    pn_s_pick_residuals_tp = np.array(pn_s_pick_residuals_tp)*0.01
+    pn_p_pick_residuals_fp = np.array(pn_p_pick_residuals_fp)*0.01
+    pn_s_pick_residuals_fp = np.array(pn_s_pick_residuals_fp)*0.01
 
     # ------------------------------------------
     # ------- FINAL STATISTICS ON DKPN
@@ -393,21 +404,33 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
 
     # SAVE RESIDUALS - DKPN
     with open(str(STORE_DIR_RESULTS / 'DKPN_TP_P_residuals.pickle'), 'wb') as file:
-        pickle.dump(dkpn_p_pick_residuals, file)
+        pickle.dump(dkpn_p_pick_residuals_tp, file)
 
     with open(str(STORE_DIR_RESULTS / 'DKPN_TP_S_residuals.pickle'), 'wb') as file:
-        pickle.dump(dkpn_s_pick_residuals, file)
+        pickle.dump(dkpn_s_pick_residuals_tp, file)
+
+    with open(str(STORE_DIR_RESULTS / 'DKPN_FP_P_residuals.pickle'), 'wb') as file:
+        pickle.dump(dkpn_p_pick_residuals_fp, file)
+
+    with open(str(STORE_DIR_RESULTS / 'DKPN_FP_S_residuals.pickle'), 'wb') as file:
+        pickle.dump(dkpn_s_pick_residuals_fp, file)
 
     # SAVE RESIDUALS - PN
     with open(str(STORE_DIR_RESULTS / 'PN_TP_P_residuals.pickle'), 'wb') as file:
-        pickle.dump(pn_p_pick_residuals, file)
+        pickle.dump(pn_p_pick_residuals_tp, file)
 
     with open(str(STORE_DIR_RESULTS / 'PN_TP_S_residuals.pickle'), 'wb') as file:
-        pickle.dump(pn_s_pick_residuals, file)
+        pickle.dump(pn_s_pick_residuals_tp, file)
+
+    with open(str(STORE_DIR_RESULTS / 'PN_FP_P_residuals.pickle'), 'wb') as file:
+        pickle.dump(pn_p_pick_residuals_fp, file)
+
+    with open(str(STORE_DIR_RESULTS / 'PN_FP_S_residuals.pickle'), 'wb') as file:
+        pickle.dump(pn_s_pick_residuals_fp, file)
 
     # =============================================================================
-    fig = EV.create_residuals_plot_compare(dkpn_p_pick_residuals, dkpn_s_pick_residuals, 
-                                           pn_p_pick_residuals, pn_s_pick_residuals, 
+    fig = EV.create_residuals_plot_compare(dkpn_p_pick_residuals_tp, dkpn_s_pick_residuals_tp,
+                                           pn_p_pick_residuals_tp, pn_s_pick_residuals_tp,
                                            binwidth=0.025,
                                            save_path=str(STORE_DIR_RESULTS / "Residuals_P_S_comparison_DKPN_PN.pdf"))
 

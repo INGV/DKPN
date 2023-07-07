@@ -27,9 +27,10 @@ def extract_picks(ts, smooth=True, thr=0.2, min_distance=50):
 
 
 def compare_picks(peaks_model, peaks_ref, stats_dict, thr=25):
-    residuals = []
     stats_dict["TOTAL"] += len(peaks_ref)
     matches = []  # ... keeping track of matches
+
+    residuals_tp, residuals_fp = [], []
 
     # First, we find TP and the corresponding matches
     matched_model_peaks = set()  # Keep track of model peaks that have been matched
@@ -39,7 +40,7 @@ def compare_picks(peaks_model, peaks_ref, stats_dict, thr=25):
             if pm in matched_model_peaks:
                 continue  # Skip model peaks that have already been matched
             if abs(pm - pf) <= thr:
-                residuals.append(pm - pf)
+                residuals_tp.append(pm - pf)
                 stats_dict["TP"] += 1
                 matches.append((pm, pf))  # Save the match
                 matched_model_peaks.add(pm)
@@ -52,8 +53,11 @@ def compare_picks(peaks_model, peaks_ref, stats_dict, thr=25):
     for pm in peaks_model:
         if pm not in [m[0] for m in matches]:
             stats_dict["FP"] += 1
+            #
+            for pf in peaks_ref:
+                residuals_fp.append(pm - pf)
 
-    return (stats_dict, residuals)
+    return (stats_dict, residuals_tp, residuals_fp)
 
 
 def calculate_scores(stats_dict):
@@ -140,7 +144,7 @@ def create_AL_plots(wave3c,
     return fig
 
 
-def create_residuals_plot(resP, resS, binwidth=0.1, save_path="image_residuals.pdf"):
+def create_residuals_plot(resP, resS, binwidth=0.025, save_path="image_residuals.pdf"):
     fig = plt.figure(figsize=(10, 5))
     axs = fig.subplots(1, 2, sharex=True)
     
@@ -161,7 +165,7 @@ def create_residuals_plot(resP, resS, binwidth=0.1, save_path="image_residuals.p
 
 
 def create_residuals_plot_compare(resP_dkpn, resS_dkpn, resP_pn, resS_pn, 
-                                  binwidth=0.1, save_path="image_residuals.pdf"):
+                                  binwidth=0.025, save_path="image_residuals.pdf"):
 
     fig = plt.figure(figsize=(12, 3))
     axs = fig.subplots(1, 2, sharex=True)

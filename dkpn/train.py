@@ -31,10 +31,13 @@ def __filter_sb_dataset__(indata, filter_for="INSTANCE"):
             np.isnan(indata.metadata["trace_S_arrival_sample"]))
         ), inplace=True)
 
+        _len_before = len(indata)
         # P-S < 3000 (both P and S inside the 30 second window)
         indata.filter((indata.metadata["trace_S_arrival_sample"] -
                        indata.metadata["trace_P_arrival_sample"] < 3000),
                       inplace=True)
+        _len_after = len(indata)
+        assert _len_after == _len_before
 
     elif filter_for.lower() == "ethz":
         indata.filter(indata.metadata["trace_completeness"] >= 0.99, inplace=True)
