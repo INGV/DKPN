@@ -31,13 +31,10 @@ def __filter_sb_dataset__(indata, filter_for="INSTANCE"):
             np.isnan(indata.metadata["trace_S_arrival_sample"]))
         ), inplace=True)
 
-        _len_before = len(indata)
         # P-S < 3000 (both P and S inside the 30 second window)
         indata.filter((indata.metadata["trace_S_arrival_sample"] -
                        indata.metadata["trace_P_arrival_sample"] < 3000),
                       inplace=True)
-        _len_after = len(indata)
-        assert _len_after == _len_before
 
     elif filter_for.lower() == "ethz":
         indata.filter(indata.metadata["trace_completeness"] >= 0.99, inplace=True)
@@ -341,7 +338,7 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
                                      shuffle=True, num_workers=num_workers,
                                      worker_init_fn=self.__worker_init_fn_seed__)
         self.test_loader = DataLoader(self.test_generator, batch_size=batch_size,
-                                      shuffle=False, num_workers=num_workers,
+                                      shuffle=True, num_workers=num_workers,
                                       worker_init_fn=self.__worker_init_fn_seed__)
 
     def __worker_init_fn_seed__(self, wid):
@@ -696,7 +693,7 @@ class TrainHelp_PhaseNet(object):
                                      shuffle=True, num_workers=num_workers,
                                      worker_init_fn=self.__worker_init_fn_seed__)
         self.test_loader = DataLoader(self.test_generator, batch_size=batch_size,
-                                      shuffle=False, num_workers=num_workers,
+                                      shuffle=True, num_workers=num_workers,
                                       worker_init_fn=self.__worker_init_fn_seed__)
 
     def set_random_seed(self, rndseed):

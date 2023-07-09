@@ -4,6 +4,9 @@ RND="777"
 BATCH="64"
 LR="0.0010"   # Must be a %.04f FORMAT!
 
+PATIENCE="3"
+IMPROVEMENT="0.0007"
+
 # =================================================================
 # =================================================================
 # =================================================================
@@ -45,13 +48,13 @@ for ((i=0; i<length; i++)); do
   ./ReTrain_DKPN.py -d ${TRAINDATA} -s ${DATASIZE} -r ${RND} \
                     -e ${EPOCHSNUM} -b ${BATCH} -l ${LR} \
                     -o DKPN_TrainDataset_${TRAINDATA}_Size_${DATASIZE}_Rnd_${RND}_LR_${LR}_Batch_${BATCH} \
-                    --early_stop -x 5 -y 0.0001
+                    --early_stop -x ${PATIENCE} -y ${IMPROVEMENT}
   echo ""
   echo "... Training PhaseNet"
   ./ReTrain_PN.py -d ${TRAINDATA} -s ${DATASIZE} -r ${RND} \
                   -e ${EPOCHSNUM} -b ${BATCH} -l ${LR} \
                   -o PN_TrainDataset_${TRAINDATA}_Size_${DATASIZE}_Rnd_${RND}_LR_${LR}_Batch_${BATCH} \
-                  --early_stop -x 5 -y 0.0001
+                  --early_stop -x ${PATIENCE} -y ${IMPROVEMENT}
 
   # --- In-Domain  TEST
   echo ""

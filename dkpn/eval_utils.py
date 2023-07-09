@@ -99,7 +99,7 @@ def create_AL_plots(wave3c,
     axs[4].plot(label_PN[1], label="PN_S")
     # 5
     axs[5].plot(label_DKPN[0], label="DKPN_P")
-    axs[5].plot(label_DKPN[1], label="DKPN_P")
+    axs[5].plot(label_DKPN[1], label="DKPN_S")
     # 6
     axs[6].plot(dkpn_cfs[0], label="DKPN_CF_Z")
     axs[6].plot(dkpn_cfs[1], label="DKPN_CF_N")
@@ -169,7 +169,7 @@ def create_residuals_plot_compare(resP_dkpn, resS_dkpn, resP_pn, resS_pn,
 
     fig = plt.figure(figsize=(12, 3))
     axs = fig.subplots(1, 2, sharex=True)
-    fig.suptitle('TRUE-POSITIVE')
+    fig.suptitle('TP + FP')
     bin_edges = np.arange(-11.05, 11.05 + binwidth, binwidth)
 
     for (ax, data, title) in zip(
