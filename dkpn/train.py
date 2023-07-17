@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import os
 import numpy as np
+import copy
 
 import torch
 from torch.utils.data import DataLoader
@@ -17,6 +18,33 @@ from dkpn.core import PreProc
 # ==================================================================
 # ==================================================================
 # ==================================================================
+
+def __add_split_column__(indata,
+                         TRAIN_PERC=0.60,
+                         DEV_PERC=0.30,
+                         TEST_PERC=0.10,
+                         RANDOM_SEED=42,
+                         verbose=False):
+    print("Adding SPLIT column for SeisBench APIs")
+    indata.metadata["split"] = "dev"
+    _idxcol = indata.metadata.columns.get_loc("split")
+
+    # =======================================================  Divide  the TRAIN/TESTSPLIT
+    LEN_TRAIN = int(len(indata.metadata)*TRAIN_PERC)
+    indata.metadata.iloc[:LEN_TRAIN, _idxcol] = "train"
+    if verbose:
+        print("Length of TRAINING DATASET:  %d" % LEN_TRAIN)
+
+    LEN_TEST = int(len(indata.metadata)*TEST_PERC)
+    indata.metadata.iloc[(LEN_TRAIN+1):(LEN_TRAIN+LEN_TEST+1), _idxcol] = "test"
+    if verbose:
+        print("Length of TEST DATASET:  %d" % LEN_TEST)
+
+    LEN_DEV = len(indata.metadata) - LEN_TRAIN - LEN_TEST
+    indata.metadata.iloc[(LEN_TRAIN+LEN_TEST):, _idxcol] = "dev"
+    if verbose:
+        print("Length of DEV DATASET:  %d" % LEN_DEV)
+    return indata
 
 
 def __filter_sb_dataset__(indata, filter_for="INSTANCE"):
@@ -39,10 +67,68 @@ def __filter_sb_dataset__(indata, filter_for="INSTANCE"):
     elif filter_for.lower() == "ethz":
         indata.filter(indata.metadata["trace_completeness"] >= 0.99, inplace=True)
 
+    elif filter_for.lower() == "pnw":
+        indata.filter(indata.metadata["source_type"] == "earthquake", inplace=True)
+        indata.filter(indata.metadata["trace_has_offset"] == 0, inplace=True)
+
+    elif filter_for.lower() == "aquila":
+        indata.filter(indata.metadata["source_type"] == "earthquake", inplace=True)
+        indata.filter(indata.metadata["path_ep_distance_km"] <= 100.0, inplace=True)
+
     else:
         raise ValueError("Invalid Filtering key!")
 
     return indata
+
+
+def __select_database_and_size_PNW__(dataset_size, filtering=False,
+                                     use_biggest_anyway=True,
+                                     RANDOM_SEED=42,
+                                     train_perc_size=0.60,
+                                     dev_perc_size=0.30,
+                                     test_perc_size=0.10):
+
+    dataset_train = sbd.WaveformDataset("/scratch/seisbench/datasets/pnw",
+                                        sampling_rate=100, cache="trace")
+    dataset_train = __add_split_column__(dataset_train,
+                                         TRAIN_PERC=train_perc_size,
+                                         DEV_PERC=dev_perc_size,
+                                         TEST_PERC=test_perc_size,
+                                         RANDOM_SEED=RANDOM_SEED)
+
+    # FILTER
+    if filtering:
+        dataset_train = __filter_sb_dataset__(dataset_train,
+                                              filter_for="PNW")
+        dataset_train.metadata.reset_index(inplace=True)
+
+    (_train, _dev, _test) = dataset_train.train_dev_test()
+    return (_train, _dev, _test)
+
+
+def __select_database_and_size_AQUILA__(dataset_size, filtering=False,
+                                        use_biggest_anyway=True,
+                                        RANDOM_SEED=42,
+                                        train_perc_size=0.60,
+                                        dev_perc_size=0.30,
+                                        test_perc_size=0.10):
+
+    dataset_train = sbd.WaveformDataset("/scratch/seisbench/datasets/aq2009counts",
+                                        sampling_rate=100, cache="trace")
+    dataset_train = __add_split_column__(dataset_train,
+                                         TRAIN_PERC=train_perc_size,
+                                         DEV_PERC=dev_perc_size,
+                                         TEST_PERC=test_perc_size,
+                                         RANDOM_SEED=RANDOM_SEED)
+
+    # FILTER
+    if filtering:
+        dataset_train = __filter_sb_dataset__(dataset_train,
+                                              filter_for="AQUILA")
+        dataset_train.metadata.reset_index(inplace=True)
+
+    (_train, _dev, _test) = dataset_train.train_dev_test()
+    return (_train, _dev, _test)
 
 
 def __select_database_and_size_ETHZ__(dataset_size, filtering=False,
@@ -96,7 +182,8 @@ def __select_database_and_size_ETHZ__(dataset_size, filtering=False,
         else:
             raise ValueError("Not a valid DATASET SIZE for ETHZ!")
 
-    return dataset_train
+    (_train, _dev, _test) = dataset_train.train_dev_test()
+    return (_train, _dev, _test)
 
 
 def __select_database_and_size_INSTANCE__(dataset_size, filtering=False,
@@ -159,7 +246,8 @@ def __select_database_and_size_INSTANCE__(dataset_size, filtering=False,
     else:
         raise ValueError("Not a valid DATASET SIZE for INSTANCE!")
 
-    return dataset_train
+    (_train, _dev, _test) = dataset_train.train_dev_test()
+    return (_train, _dev, _test)
 
 
 def __select_database_and_size_SCEDC__(dataset_size, filtering=False,
@@ -221,7 +309,8 @@ def __select_database_and_size_SCEDC__(dataset_size, filtering=False,
     else:
         raise ValueError("Not a valid DATASET SIZE for INSTANCE!")
 
-    return dataset_train
+    (_train, _dev, _test) = dataset_train.train_dev_test()
+    return (_train, _dev, _test)
 
 
 def select_database_and_size(dataset_name, dataset_size, RANDOM_SEED=42):
@@ -233,26 +322,67 @@ def select_database_and_size(dataset_name, dataset_size, RANDOM_SEED=42):
 
     # ===========> DATASET
     if dataset_name.upper() == "ETHZ":
-        mydataset = __select_database_and_size_ETHZ__(dataset_size.lower(),
-                                                      filtering=True,
-                                                      RANDOM_SEED=RANDOM_SEED)
+        (_train, _dev, _test) = __select_database_and_size_ETHZ__(
+                                                    dataset_size.lower(),
+                                                    filtering=True,
+                                                    RANDOM_SEED=RANDOM_SEED)
 
     elif dataset_name.upper() == "INSTANCE":
-        mydataset = __select_database_and_size_INSTANCE__(
-                                                      dataset_size.lower(),
-                                                      filtering=True,
-                                                      RANDOM_SEED=RANDOM_SEED)
+        (_train, _dev, _test) = __select_database_and_size_INSTANCE__(
+                                                    dataset_size.lower(),
+                                                    filtering=True,
+                                                    RANDOM_SEED=RANDOM_SEED)
 
     elif dataset_name.upper() == "SCEDC":
-        mydataset = __select_database_and_size_INSTANCE__(
-                                                      dataset_size.lower(),
-                                                      filtering=True,
-                                                      RANDOM_SEED=RANDOM_SEED)
+        (_train, _dev, _test) = __select_database_and_size_INSTANCE__(
+                                                    dataset_size.lower(),
+                                                    filtering=True,
+                                                    RANDOM_SEED=RANDOM_SEED)
+    elif dataset_name.upper() == "PNW":
+        (_train, _dev, _test) = __select_database_and_size_PNW__(
+                                                    dataset_size.lower(),
+                                                    filtering=True,
+                                                    RANDOM_SEED=RANDOM_SEED)
+    elif dataset_name.upper() == "AQUILA":
+        (_train, _dev, _test) = __select_database_and_size_AQUILA__(
+                                                    dataset_size.lower(),
+                                                    filtering=True,
+                                                    RANDOM_SEED=RANDOM_SEED)
 
     else:
         raise ValueError("Not a valid DATASET NAME!")
 
-    return mydataset
+    return (_train, _dev, _test)
+
+
+def early_stop_criteria(trainl, trainl_batch,
+                        devl, devl_batch,
+                        patience, delta):
+    """ Return a bool to stop or not the training """
+
+    # Calculate mean improvement in the last '2*patience' epochs
+    mean_loss_before = np.mean(devl[-2*patience:-patience-1])
+    mean_loss_current = np.mean(devl[-patience:])
+    improvement = mean_loss_before - mean_loss_current
+    print("Early stopping: mean_DEV_LOSS_before %7f "
+          "mean_DEV_LOSS_current %7f improvement %7f" % (mean_loss_before,
+                                                         mean_loss_current,
+                                                         improvement))
+
+    # 1. If improvement is less than 'delta', stop the training
+    if improvement < delta:
+        print("@@@ Early stopping triggered! Flat DEV loss")
+        return (True, "flat", 1)
+
+    # 2. Check if the DEV LOSS is always higher than the highest TRAIN
+    #    batch loss
+    A = np.array([np.max(cc) for cc in trainl_batch[-patience:]])
+    B = np.array(devl[-patience:])
+    if np.all((B-A) > 0):
+        print("@@@ Early stopping triggered! DEV loss always on top of TRAIN")
+        return (True, "invert", patience)
+    #
+    return (False, "null", 0)
 
 # ==================================================================
 # ==================================================================
@@ -318,9 +448,10 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
         self.train_loader, self.dev_loader, self.test_loader = None, None, None
 
         # ----------  0. Define query windows
-        self.dkpnmod = dkpninstance
+        self.trainmod = dkpninstance
+        self.model_epochs_list = []
         self.augmentations_par["fp_stabilization"] = int(
-                            self.dkpnmod.default_args["fp_stabilization"]*100.0)
+                            self.trainmod.default_args["fp_stabilization"]*100.0)
 
         # ---------  1. Define augmentations
         self.augmentations = self.__define_augmentations__(**self.augmentations_par)
@@ -338,7 +469,7 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
                                      shuffle=True, num_workers=num_workers,
                                      worker_init_fn=self.__worker_init_fn_seed__)
         self.test_loader = DataLoader(self.test_generator, batch_size=batch_size,
-                                      shuffle=True, num_workers=num_workers,
+                                      shuffle=False, num_workers=num_workers,
                                       worker_init_fn=self.__worker_init_fn_seed__)
 
     def __worker_init_fn_seed__(self, wid):
@@ -391,7 +522,7 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
                 # - calculations of the 5 CFs
                 # - removing the first N samples + taking 3001 samples (final window)
                 # - Std normalization of the 3 cfs + modulus
-                PreProc(**self.dkpnmod.default_args),
+                PreProc(**self.trainmod.default_args),
             ]
         #
         return augmentations_list
@@ -423,10 +554,10 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
         train_loss_batches = []
         for batch_id, batch in enumerate(self.train_loader):
             # Compute prediction and loss
-            pred = self.dkpnmod(batch["X"].to(
-                                        self.dkpnmod.device))
+            pred = self.trainmod(batch["X"].to(
+                                        self.trainmod.device))
             loss = self.__loss_fn__(pred, batch["y"].to(
-                                        self.dkpnmod.device))
+                                        self.trainmod.device))
             train_loss_batches.append(loss.item())
             train_loss += loss
 
@@ -447,19 +578,19 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
         test_loss = 0
         test_loss_batches = []
 
-        self.dkpnmod.eval()  # 20230524
+        self.trainmod.eval()  # 20230524
 
         with torch.no_grad():
             for batch in self.dev_loader:
-                pred = self.dkpnmod(batch["X"].to(
-                                self.dkpnmod.device))
+                pred = self.trainmod(batch["X"].to(
+                                self.trainmod.device))
                 _tlb = self.__loss_fn__(pred, batch["y"].to(
-                                self.dkpnmod.device)).item()
+                                self.trainmod.device)).item()
                 #
                 test_loss += _tlb
                 test_loss_batches.append(_tlb)
 
-        self.dkpnmod.train()  # 20230524
+        self.trainmod.train()  # 20230524
 
         test_loss /= num_batches
         print(f"Dev. avg loss: {test_loss:>8f}\n")
@@ -475,7 +606,7 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
 
         # Defining OPTIMIZER
         if optimizer_type.lower() in ("adam", "adm"):
-            optim = torch.optim.Adam(self.dkpnmod.parameters(),
+            optim = torch.optim.Adam(self.trainmod.parameters(),
                                      lr=learning_rate)
         else:
             raise ValueError("At the moment only the 'Adam' optimizer "
@@ -513,7 +644,7 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
 
         # Defining OPTIMIZER
         if optimizer_type.lower() in ("adam", "adm"):
-            optim = torch.optim.Adam(self.dkpnmod.parameters(),
+            optim = torch.optim.Adam(self.trainmod.parameters(),
                                      lr=learning_rate)
         else:
             raise ValueError("At the moment only the 'Adam' optimizer "
@@ -539,20 +670,39 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
 
             losses.append(_test_loss)
 
+            # Store model for HISTORY porpuses
+            self.model_epochs_list.append(
+                copy.deepcopy(
+                    self.trainmod))
+
             # If we have more than '2*patience' epochs done,
             # we can start checking for early stopping
-            if t >= 2 * patience:
-                # Calculate improvement in the last 'patience' epochs
-                mean_loss_before = np.mean(test_loss_epochs[-2*patience:-patience-1])
-                mean_loss_current = np.mean(test_loss_epochs[-patience:])
-                improvement = mean_loss_before - mean_loss_current
-                print("Early stopping: mean_loss_before %7f mean_loss_current %7f improvement %7f" % (mean_loss_before, mean_loss_current, improvement))
 
-                # If improvement is less than 'delta', stop the training
-                if improvement < delta:
-                    print("Early stopping triggered! - EPOCH:  %d  (mean_loss_before %7f mean_loss_current %7f improvement %7f)" % (t+1, mean_loss_before, mean_loss_current, improvement))
-                    break
-        #
+            if t >= 2 * patience:
+                (_answer, _, _step_back) = early_stop_criteria(
+                                train_loss_epochs, train_loss_epochs_batches,
+                                test_loss_epochs, test_loss_epochs_batches,
+                                patience, delta)
+
+                if _answer:
+                    # Early stop triggered..pack everything
+                    self.__training_epochs__ = (t+1) - _step_back
+                    self.trainmod = copy.deepcopy(
+                                        self.model_epochs_list[-_step_back-1])
+                    del self.model_epochs_list
+                    return (train_loss_epochs[:-_step_back],
+                            train_loss_epochs_batches[:-_step_back],
+                            test_loss_epochs[:-_step_back],
+                            test_loss_epochs_batches[:-_step_back])
+
+                else:
+                    # Free unnecessary memory
+                    if len(self.model_epochs_list) > patience:
+                        del self.model_epochs_list[:-patience-1]
+
+        # If here, we reached the maximum epochs provided by the user,
+        # Return everything in full
+        print("@@@ Reached the FULL  %d  epochs!" % epochs)
         self.__training_epochs__ = t+1
         return (train_loss_epochs, train_loss_epochs_batches,
                 test_loss_epochs, test_loss_epochs_batches)
@@ -564,7 +714,7 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
             dir_path = Path(dir_path)
 
         def _create_json_(docs, pathfile):
-            def_dct = self.dkpnmod.get_defaults()
+            def_dct = self.trainmod.get_defaults()
             with open(str(pathfile), "w") as OUT:
 
                 OUT.write("{"+os.linesep)
@@ -596,12 +746,12 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
             dir_path.mkdir()
 
         _create_json_(jsonstring, dir_path / (str(model_name) + ".json"))
-        torch.save(self.dkpnmod.state_dict(),
+        torch.save(self.trainmod.state_dict(),
                    str(dir_path / (str(model_name) + ".pt"))
                    )
 
     def get_model(self):
-        return self.dkpnmod
+        return self.trainmod
 
     def get_generator(self):
         return (self.train_generator, self.dev_generator, self.test_generator)
@@ -675,7 +825,8 @@ class TrainHelp_PhaseNet(object):
         self.__training_epochs__ = None
 
         # ----------  0. Define query windows
-        self.pnmod = pninstance
+        self.trainmod = pninstance
+        self.model_epochs_list = []
 
         # ---------  1. Define augmentations
         self.augmentations = self.__define_augmentations__(**self.augmentations_par)
@@ -693,7 +844,7 @@ class TrainHelp_PhaseNet(object):
                                      shuffle=True, num_workers=num_workers,
                                      worker_init_fn=self.__worker_init_fn_seed__)
         self.test_loader = DataLoader(self.test_generator, batch_size=batch_size,
-                                      shuffle=True, num_workers=num_workers,
+                                      shuffle=False, num_workers=num_workers,
                                       worker_init_fn=self.__worker_init_fn_seed__)
 
     def set_random_seed(self, rndseed):
@@ -783,10 +934,10 @@ class TrainHelp_PhaseNet(object):
         train_loss_batches = []
         for batch_id, batch in enumerate(self.train_loader):
             # Compute prediction and loss
-            pred = self.pnmod(batch["X"].to(
-                                        self.pnmod.device))
+            pred = self.trainmod(batch["X"].to(
+                                        self.trainmod.device))
             loss = self.__loss_fn__(pred, batch["y"].to(
-                                        self.pnmod.device))
+                                        self.trainmod.device))
             train_loss_batches.append(loss.item())
             train_loss += loss
 
@@ -807,19 +958,19 @@ class TrainHelp_PhaseNet(object):
         test_loss = 0
         test_loss_batches = []
 
-        self.pnmod.eval()  # 20230524
+        self.trainmod.eval()  # 20230524
 
         with torch.no_grad():
             for batch in self.dev_loader:
-                pred = self.pnmod(batch["X"].to(
-                                self.pnmod.device))
+                pred = self.trainmod(batch["X"].to(
+                                self.trainmod.device))
                 _tlb = self.__loss_fn__(pred, batch["y"].to(
-                                self.pnmod.device)).item()
+                                self.trainmod.device)).item()
 
                 test_loss += _tlb
                 test_loss_batches.append(_tlb)
 
-        self.pnmod.train()  # 20230524
+        self.trainmod.train()  # 20230524
 
         test_loss /= num_batches
         print(f"Dev. avg loss: {test_loss:>8f}\n")
@@ -835,7 +986,7 @@ class TrainHelp_PhaseNet(object):
 
         # Defining OPTIMIZER
         if optimizer_type.lower() in ("adam", "adm"):
-            optim = torch.optim.Adam(self.pnmod.parameters(),
+            optim = torch.optim.Adam(self.trainmod.parameters(),
                                      lr=learning_rate)
         else:
             raise ValueError("At the moment only the 'Adam' optimizer "
@@ -873,7 +1024,7 @@ class TrainHelp_PhaseNet(object):
 
         # Defining OPTIMIZER
         if optimizer_type.lower() in ("adam", "adm"):
-            optim = torch.optim.Adam(self.pnmod.parameters(),
+            optim = torch.optim.Adam(self.trainmod.parameters(),
                                      lr=learning_rate)
         else:
             raise ValueError("At the moment only the 'Adam' optimizer "
@@ -899,20 +1050,39 @@ class TrainHelp_PhaseNet(object):
 
             losses.append(_test_loss)
 
+            # Store model for HISTORY porpuses
+            self.model_epochs_list.append(
+                copy.deepcopy(
+                    self.trainmod))
+
             # If we have more than '2*patience' epochs done,
             # we can start checking for early stopping
-            if t >= 2 * patience:
-                # Calculate improvement in the last 'patience' epochs
-                mean_loss_before = np.mean(test_loss_epochs[-2*patience:-patience-1])
-                mean_loss_current = np.mean(test_loss_epochs[-patience:])
-                improvement = mean_loss_before - mean_loss_current
-                print("Early stopping: mean_loss_before %7f mean_loss_current %7f improvement %7f" % (mean_loss_before, mean_loss_current, improvement))
 
-                # If improvement is less than 'delta', stop the training
-                if improvement < delta:
-                    print("Early stopping triggered! - EPOCH:  %d  (mean_loss_before %7f mean_loss_current %7f improvement %7f)" % (t+1, mean_loss_before, mean_loss_current, improvement))
-                    break
-        #
+            if t >= 2 * patience:
+                (_answer, _, _step_back) = early_stop_criteria(
+                                train_loss_epochs, train_loss_epochs_batches,
+                                test_loss_epochs, test_loss_epochs_batches,
+                                patience, delta)
+
+                if _answer:
+                    # Early stop triggered..pack everything
+                    self.__training_epochs__ = (t+1) - _step_back
+                    self.trainmod = copy.deepcopy(
+                                        self.model_epochs_list[-_step_back-1])
+                    del self.model_epochs_list
+                    return (train_loss_epochs[:-_step_back],
+                            train_loss_epochs_batches[:-_step_back],
+                            test_loss_epochs[:-_step_back],
+                            test_loss_epochs_batches[:-_step_back])
+
+                else:
+                    # Free unnecessary memory
+                    if len(self.model_epochs_list) > patience:
+                        del self.model_epochs_list[:-patience-1]
+
+        # If here, we reached the maximum epochs provided by the user,
+        # Return everything in full
+        print("@@@ Reached the FULL  %d  epochs!" % epochs)
         self.__training_epochs__ = t+1
         return (train_loss_epochs, train_loss_epochs_batches,
                 test_loss_epochs, test_loss_epochs_batches)
@@ -946,12 +1116,12 @@ class TrainHelp_PhaseNet(object):
             dir_path.mkdir()
 
         _create_json_(jsonstring, dir_path / (str(model_name) + ".json"))
-        torch.save(self.pnmod.state_dict(),
+        torch.save(self.trainmod.state_dict(),
                    str(dir_path / (str(model_name) + ".pt"))
                    )
 
     def get_model(self):
-        return self.pnmod
+        return self.trainmod
 
     def get_generator(self):
         return (self.train_generator, self.dev_generator, self.test_generator)

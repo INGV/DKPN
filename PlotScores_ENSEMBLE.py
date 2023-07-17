@@ -19,8 +19,7 @@ sns.set(style="darkgrid")
 
 METHOD = "median"  # "mean"
 
-# RANDOM_NUMBERS = ["17", "36", "50", "142", "234", "777", "987"]
-RANDOM_NUMBERS = [ "36", "50", "142"]  # , "234", "777", "987"]
+RANDOM_NUMBERS = ["17", "36", "50", "142", "234", "777", "987"]
 DATASETS = [("INSTANCE", "INSTANCE"), ("INSTANCE", "ETHZ")]
 SIZES = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY", "SMALL", "MEDIUM", "LARGE"]
 THRVAL = ["02", "05"]
@@ -56,6 +55,7 @@ def __make_figure__(DKPN_SCORES, PN_SCORES, TRAINNAME, TESTNAME, THRVAL,
                     store_file="DE.pdf", X_LABELS=SIZES, method="mean"):
 
     color_list = ["darkgoldenrod", "magenta", "blue"]
+
     def extract_dict_values(indict, what_list, order=["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY"]):
         value_lists = []
         for key in what_list:

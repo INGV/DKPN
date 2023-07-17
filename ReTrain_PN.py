@@ -62,11 +62,9 @@ print("")
 # ----------------------------------------------------------------------------
 # SELECT DATASET and SIZE
 
-dataset_train = dktrain.select_database_and_size(
+(train, dev, test) = dktrain.select_database_and_size(
                             args.dataset_name, args.dataset_size,
                             RANDOM_SEED=args.random_seed)
-
-train, dev, test = dataset_train.train_dev_test()
 
 print("TRAIN samples %s:  %d" % (args.dataset_name, len(train)))
 print("  DEV samples %s:  %d" % (args.dataset_name, len(dev)))

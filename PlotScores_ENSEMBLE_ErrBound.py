@@ -19,8 +19,7 @@ sns.set(style="darkgrid")
 
 METHOD = "median"  # "mean"
 
-# RANDOM_NUMBERS = ["17", "36", "50", "142", "234", "777", "987"]
-RANDOM_NUMBERS = [ "36", "50", "142"]  # , "234", "777", "987"]
+RANDOM_NUMBERS = ["17", "36", "50", "142", "234", "777", "987"]
 DATASETS = [("INSTANCE", "INSTANCE"), ("INSTANCE", "ETHZ")]
 SIZES = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY", "SMALL", "MEDIUM", "LARGE"]
 THRVAL = ["02", "05"]
@@ -56,7 +55,6 @@ def __make_figure__(DKPN_SCORES_LIST, PN_SCORES_LIST, TRAINNAME, TESTNAME, THRVA
 
     (DKPN_SCORES, DKPN_SCORES_MIN, DKPN_SCORES_MAX) = DKPN_SCORES_LIST
     (PN_SCORES, PN_SCORES_MIN, PN_SCORES_MAX) = PN_SCORES_LIST
-
 
     def extract_dict_values(indict, what_list, order=["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY"]):
         value_lists = []
