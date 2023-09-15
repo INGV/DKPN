@@ -6,6 +6,7 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 from pathlib import Path
+import pandas as pd
 
 import obspy
 
@@ -162,7 +163,9 @@ TRAIN_CLASS_DKPN = dktrain.TrainHelp_DomainKnowledgePhaseNet(
 
 # ========================  CREATE A LIST OF UNIQUE INDEX FROM RANDOM ... AVOID DUPLICATES
 rng = np.random.default_rng(seed=args.random_seed)
-rnidx = rng.choice(np.arange(args.test_samples), size=args.test_samples, replace=False)
+rnidx = rng.choice(np.arange(args.test_samples),
+                   size=args.test_samples,
+                   replace=False)
 
 
 # --------------------------------------------------------------
@@ -176,6 +179,13 @@ pn_p_pick_residuals_tp, pn_s_pick_residuals_tp = [], []
 #
 dkpn_p_pick_residuals_fp, dkpn_s_pick_residuals_fp = [], []
 pn_p_pick_residuals_fp, pn_s_pick_residuals_fp = [], []
+
+PICKDICT_COLUMNS = ["trace_id", "sample_idx", "phase", "width", "amplitude", "label", "picker"]
+PICKDICT = {}
+
+# data = {'row_1': [3, 2, 1, 0], 'row_2': ['a', 'b', 'c', 'd']}
+# pd.DataFrame.from_dict(data, orient='index',
+#                        columns=['A', 'B', 'C', 'D'])
 
 for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
 
@@ -207,29 +217,34 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         # ----------------- Do STATISTICS DKPN
 
         # P
-        (DKPN_P_picks_model, DKPN_P_widths_model) = EV.extract_picks(
+        (DKPN_P_picks_model, DKPN_P_widths_model, DKPN_P_amplitude_model) = EV.extract_picks(
                                                         DKPN_pred[0],
                                                         smooth=True,
                                                         thr=args.pickthreshold_p)
-        (DKPN_P_picks_label, DKPN_P_widths_label) = EV.extract_picks(
+        (DKPN_P_picks_label, DKPN_P_widths_label, DKPN_P_amplitude_label) = (
+                                                       EV.extract_picks(
                                                         DKPN_sample["y"][0],
                                                         smooth=True,
                                                         thr=args.pickthreshold_p)
+                                                       )
 
         (DKPN_stats_dict_P, DKPN_residual_TP_P, DKPN_residual_FP_P) = EV.compare_picks(
                                           DKPN_P_picks_model, 
                                           DKPN_P_picks_label, 
                                           DKPN_stats_dict_P,
                                           thr=args.truepositive_p)
+
         # S
-        (DKPN_S_picks_model, DKPN_S_widths_model) = EV.extract_picks(
+        (DKPN_S_picks_model, DKPN_S_widths_model, DKPN_S_amplitude_model) = EV.extract_picks(
                                                         DKPN_pred[1],
                                                         smooth=True,
                                                         thr=args.pickthreshold_s)
-        (DKPN_S_picks_label, DKPN_S_widths_label) = EV.extract_picks(
+        (DKPN_S_picks_label, DKPN_S_widths_label, DKPN_S_amplitude_label) = (
+                                                       EV.extract_picks(
                                                         DKPN_sample["y"][1],
                                                         smooth=True,
                                                         thr=args.pickthreshold_s)
+                                                       )
 
         (DKPN_stats_dict_S, DKPN_residual_TP_S, DKPN_residual_FP_S) = EV.compare_picks(
                                           DKPN_S_picks_model, 
@@ -242,18 +257,53 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         dkpn_p_pick_residuals_fp.extend(DKPN_residual_FP_P)
         dkpn_s_pick_residuals_fp.extend(DKPN_residual_FP_S)
 
+        # === Populate Picks
+        # "trace_id", "sample_idx", "phase", "width", "amplitude", "label", "picker"
+        for _xx in range(len(DKPN_P_picks_model)):
+            PICKDICT[str(len(PICKDICT.keys()))] = [
+                'trace_'+str(rnidx[xx]),
+                DKPN_P_picks_model[_xx], 'P',
+                DKPN_P_widths_model[_xx],
+                DKPN_P_amplitude_model[_xx], 'pred', 'DKPN'
+            ]
+        for _xx in range(len(DKPN_P_picks_label)):
+            PICKDICT[str(len(PICKDICT.keys()))] = [
+                'trace_'+str(rnidx[xx]),
+                DKPN_P_picks_label[_xx], 'P',
+                DKPN_P_widths_label[_xx],
+                DKPN_P_amplitude_label[_xx], 'ref', 'DKPN'
+            ]
+
+        for _xx in range(len(DKPN_S_picks_model)):
+            PICKDICT[str(len(PICKDICT.keys()))] = [
+                'trace_'+str(rnidx[xx]),
+                DKPN_S_picks_model[_xx], 'S',
+                DKPN_S_widths_model[_xx],
+                DKPN_S_amplitude_model[_xx], 'pred', 'DKPN'
+            ]
+        for _xx in range(len(DKPN_S_picks_label)):
+            PICKDICT[str(len(PICKDICT.keys()))] = [
+                'trace_'+str(rnidx[xx]),
+                DKPN_S_picks_label[_xx], 'S',
+                DKPN_S_widths_label[_xx],
+                DKPN_S_amplitude_label[_xx], 'ref', 'DKPN'
+            ]
+
+
         # ------------------------------------------------------------
         # ----------------- Do STATISTICS PN
 
         # P
-        (PN_P_picks_model, PN_P_widths_model) = EV.extract_picks(
+        (PN_P_picks_model, PN_P_widths_model, PN_P_amplitude_model) = EV.extract_picks(
                                                         PN_pred[0],
                                                         smooth=True,
                                                         thr=args.pickthreshold_p)
-        (PN_P_picks_label, PN_P_widths_label) = EV.extract_picks(
+        (PN_P_picks_label, PN_P_widths_label, PN_P_amplitude_label) = (
+                                                   EV.extract_picks(
                                                         PN_sample["y"][0],
                                                         smooth=True,
                                                         thr=args.pickthreshold_p)
+                                                )
 
         (PN_stats_dict_P, PN_residual_TP_P, PN_residual_FP_P) = EV.compare_picks(
                                         PN_P_picks_model, 
@@ -261,14 +311,16 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
                                         PN_stats_dict_P,
                                         thr=args.truepositive_p)
         # S
-        (PN_S_picks_model, PN_S_widths_model) = EV.extract_picks(
+        (PN_S_picks_model, PN_S_widths_model, PN_S_amplitude_model) = EV.extract_picks(
                                                         PN_pred[1],
                                                         smooth=True,
                                                         thr=args.pickthreshold_s)
-        (PN_S_picks_label, PN_S_widths_label) = EV.extract_picks(
+        (PN_S_picks_label, PN_S_widths_label, PN_S_amplitude_label) = (
+                                                   EV.extract_picks(
                                                         PN_sample["y"][1],
                                                         smooth=True,
                                                         thr=args.pickthreshold_s)
+                                                    )
 
         (PN_stats_dict_S, PN_residual_TP_S, PN_residual_FP_S) = EV.compare_picks(
                                         PN_S_picks_model, 
@@ -280,6 +332,38 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         pn_s_pick_residuals_tp.extend(PN_residual_TP_S)
         pn_p_pick_residuals_fp.extend(PN_residual_FP_P)
         pn_s_pick_residuals_fp.extend(PN_residual_FP_S)
+
+        # === Populate Picks
+        # "trace_id", "sample_idx", "phase", "width", "amplitude", "label", "picker"
+        for _xx in range(len(PN_P_picks_model)):
+            PICKDICT[str(len(PICKDICT.keys()))] = [
+                'trace_'+str(rnidx[xx]),
+                PN_P_picks_model[_xx], 'P',
+                PN_P_widths_model[_xx],
+                PN_P_amplitude_model[_xx], 'pred', 'PN'
+            ]
+        for _xx in range(len(PN_P_picks_label)):
+            PICKDICT[str(len(PICKDICT.keys()))] = [
+                'trace_'+str(rnidx[xx]),
+                PN_P_picks_label[_xx], 'P',
+                PN_P_widths_label[_xx],
+                PN_P_amplitude_label[_xx], 'ref', 'PN'
+            ]
+
+        for _xx in range(len(PN_S_picks_model)):
+            PICKDICT[str(len(PICKDICT.keys()))] = [
+                'trace_'+str(rnidx[xx]),
+                PN_S_picks_model[_xx], 'S',
+                PN_S_widths_model[_xx],
+                PN_S_amplitude_model[_xx], 'pred', 'PN'
+            ]
+        for _xx in range(len(PN_S_picks_label)):
+            PICKDICT[str(len(PICKDICT.keys()))] = [
+                'trace_'+str(rnidx[xx]),
+                PN_S_picks_label[_xx], 'S',
+                PN_S_widths_label[_xx],
+                PN_S_amplitude_label[_xx], 'ref', 'PN'
+            ]
 
         # ------------------------------------------------------------
         # ----------------- PLOTS
@@ -427,6 +511,21 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         pickle.dump(pn_s_pick_residuals_fp, file)
 
     # =============================================================================
+
+    # STOREPICK CSV
+    dfpk = pd.DataFrame.from_dict(PICKDICT, orient="index",
+                                  columns=PICKDICT_COLUMNS)
+    dfpk.to_csv(
+                str(STORE_DIR_RESULTS / "Picks.csv"),
+                sep=',',
+                index=False,
+                float_format="%.3f",
+                na_rep="NA", encoding='utf-8')
+
+    with open(str(STORE_DIR_RESULTS / 'Picks.pickle'), 'wb') as file:
+        pickle.dump(dfpk, file)
+
+    # TP residuals
     fig = EV.create_residuals_plot_compare(dkpn_p_pick_residuals_tp, dkpn_s_pick_residuals_tp,
                                            pn_p_pick_residuals_tp, pn_s_pick_residuals_tp,
                                            binwidth=0.025,

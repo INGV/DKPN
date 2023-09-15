@@ -18,12 +18,16 @@ def extract_picks(ts, smooth=True, thr=0.2, min_distance=50):
     if smooth:
         smoothing_filter = [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]  # remove rapid oscillations between samples
         ts = np.convolve(ts, smoothing_filter, mode='same')
-    #
-    peaks, _ = find_peaks(ts, thr, distance=min_distance)
+    # Before proceeding make sure there are no NaNs, otherwise scipy can lead to erroneous results
+    assert not np.isnan(np.sum(ts))
+
+    # Find peaks, widths and amplitudes
+    peaks, _extra_dict = find_peaks(ts, thr, distance=min_distance)
+    ampl = _extra_dict['peak_heights']
     widths = peak_widths(ts, peaks, rel_height=0.5, prominence_data=None, wlen=None)
     widths = widths[0]
     #
-    return (peaks, widths)
+    return (peaks, widths, ampl)
 
 
 def compare_picks(peaks_model, peaks_ref, stats_dict, thr=25):
