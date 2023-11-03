@@ -70,6 +70,8 @@ def __filter_sb_dataset__(indata, filter_for="INSTANCE"):
     elif filter_for.lower() == "pnw":
         indata.filter(indata.metadata["source_type"] == "earthquake", inplace=True)
         indata.filter(indata.metadata["trace_has_offset"] == 0, inplace=True)
+        # Avoid missing channel, to help S-detection
+        indata.filter(indata.metadata["trace_missing_channel"] < 1, inplace=True)
 
     elif filter_for.lower() == "aquila":
         indata.filter(indata.metadata["source_type"] == "earthquake", inplace=True)

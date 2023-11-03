@@ -24,8 +24,10 @@ DATASETS = [("INSTANCE", "INSTANCE"), ("INSTANCE", "ETHZ")]
 SIZES = ["NANO3", "NANO2", "NANO1", "NANO", "MICRO", "TINY", "SMALL", "MEDIUM", "LARGE"]
 THRVAL = ["02", "05"]
 
-BASEFOLDER_START = "./FinalRetrain_DKPN_PN_PAPER___Rnd__"
-BASEFOLDER_END = "__TESTING-ULTIMATE_noDetrend"
+#BASEFOLDER_START = "./FinalRetrain_DKPN_PN_PAPER___Rnd__"
+#BASEFOLDER_END = "__TESTING-ULTIMATE_noDetrend"
+BASEFOLDER_START = "Rnd_"
+BASEFOLDER_END = ""
 
 # =================================================
 # =================================================
