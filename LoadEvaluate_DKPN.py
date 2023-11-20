@@ -66,9 +66,6 @@ print(f"NPLOTS: {args.nplots}")
 print(f"NSAMPLES: {args.test_samples}")
 
 
-# DKPN_MODEL_PATH = Path(args.dkpn_model_name+"/"+args.dkpn_model_name+".pt")
-# PN_MODEL_PATH = Path(args.pn_model_name+"/"+args.pn_model_name+".pt")
-
 DKPN_MODEL_PATH = [xx for xx in Path(args.dkpn_model_name).glob("*.pt")][0]
 PN_MODEL_PATH = [xx for xx in Path(args.pn_model_name).glob("*.pt")][0]
 
@@ -154,7 +151,18 @@ TRAIN_CLASS_DKPN = dktrain.TrainHelp_DomainKnowledgePhaseNet(
                         "trace_S1_arrival_sample": "S",
                         "trace_Sg_arrival_sample": "S",
                         "trace_SmS_arrival_sample": "S",
-                        "trace_Sn_arrival_sample": "S"
+                        "trace_Sn_arrival_sample": "S",
+                        # For AQUILA
+                        "trace_p1_arrival_sample": "P",
+                        "trace_p2_arrival_sample": "P",
+                        "trace_p3_arrival_sample": "P",
+                        "trace_p4_arrival_sample": "P",
+                        "trace_p5_arrival_sample": "P",
+                        "trace_s1_arrival_sample": "S",
+                        "trace_s2_arrival_sample": "S",
+                        "trace_s3_arrival_sample": "S",
+                        "trace_s4_arrival_sample": "S",
+                        "trace_s5_arrival_sample": "S",
                     },
                 })
 
@@ -169,6 +177,28 @@ rnidx = rng.choice(np.arange(args.test_samples),
 
 
 # --------------------------------------------------------------
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+# --------------------------------------------------------------
+
+def __return_matching__(series, cols):
+    found_it = False
+    for col in cols:
+        try:
+            value = getattr(series, col)
+            found_it = True
+        except AttributeError:
+            continue
+    #
+    if found_it:
+        if not isinstance(value, str) and np.isnan(value):
+            value = ""
+        return value
+    else:
+        raise ValueError("couldn't find anything")
+
 
 do_stats_on = [# (dev_generator_dkpn, "DEV_DKPN", "DEV_PN"),
                (test_generator_dkpn, "TEST_DKPN", "TEST_PN"),
@@ -183,10 +213,6 @@ pn_p_pick_residuals_fp, pn_s_pick_residuals_fp = [], []
 PICKDICT_COLUMNS = ["trace_id", "sample_idx", "phase", "width", "amplitude", "label", "picker"]
 PICKDICT = {}
 
-# data = {'row_1': [3, 2, 1, 0], 'row_2': ['a', 'b', 'c', 'd']}
-# pd.DataFrame.from_dict(data, orient='index',
-#                        columns=['A', 'B', 'C', 'D'])
-
 for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
 
     print("Working with:  %s + %s" % (DKPN_gen_name, PN_gen_name))
@@ -196,8 +222,81 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
     figureidx = 0
 
     for xx in tqdm(range(args.test_samples)):
+        rand_num_selection = rnidx[xx]
 
-        DKPN_sample = DKPN_gen[rnidx[xx]]
+        METADATA = DKPN_gen.dataset.metadata.iloc[rand_num_selection]
+
+        _sta_lat_deg = __return_matching__(
+                            METADATA,
+                            ["station_latitude_deg", "stat_lat_deg",
+                             "station_latitude"]
+                       )
+
+        _sta_lon_deg = __return_matching__(
+                            METADATA,
+                            ["station_longitude_deg", "stat_lon_deg",
+                             "station_longitude"]
+                       )
+
+        _eq_lat_deg = __return_matching__(
+                            METADATA,
+                            ["source_latitude_deg", "source_lat_deg",
+                             "source_latitude"]
+                       )
+
+        _eq_lon_deg = __return_matching__(
+                            METADATA,
+                            ["source_longitude_deg", "source_lon_deg",
+                             "source_longitude"]
+                       )
+
+        epidist = obspy.geodetics.base.locations2degrees(
+                    _sta_lat_deg, _sta_lon_deg, _eq_lat_deg, _eq_lon_deg)
+        epidist = obspy.geodetics.base.degrees2kilometers(epidist)
+
+        _net_code = __return_matching__(
+                            METADATA, ["station_network_code",
+                                       "station_network"])
+        _sta_code = __return_matching__(
+                            METADATA, ["station_code", "station_name"])
+        _loc_code = __return_matching__(
+                            METADATA, ["station_location_code",
+                                       "station_location"])
+        if _loc_code == 0.0: _loc_code = "00"
+        if _loc_code == 1.0: _loc_code = "01"
+
+        _chan_code = __return_matching__(
+                            METADATA, ["station_channel_code",
+                                       "trace_channel",
+                                       "station_channel",
+                                       "station_channels"])
+        seedid = ".".join([str(_net_code), str(_sta_code),
+                           str(_loc_code), str(_chan_code)])
+
+        _start_time = __return_matching__(
+                            METADATA, ["trace_start",
+                                       "trace_start_time",
+                                       "trace_time"])
+
+        _magnitude_type = __return_matching__(
+                            METADATA, ["preferred_source_magnitude_type",
+                                       "source_magnitude_type",
+                                       "magnitude_type"])
+        _magnitude = __return_matching__(
+                            METADATA, ["preferred_source_magnitude",
+                                       "source_magnitude",
+                                       "magnitude"])
+
+        # --------------------- Prepare FIG TITLE
+
+        FIGURE_TITLE = "%s - %s  %s  %s  %s:%.1f  EpiDist:%.1f km" % (
+                            args.dataset_size, args.dataset_name,
+                            seedid, _start_time,
+                            _magnitude_type, _magnitude, epidist)
+
+        # -----------------------------------------------------------
+
+        DKPN_sample = DKPN_gen[rand_num_selection]
         # Create equal window for PN (stored in Xorig of DKPN, but we must remove the fp_stab samples)
         PN_sample = {}
         PN_sample["X"] = DKPN_sample["Xorig"][:, mydkpn.default_args["fp_stabilization"]*mydkpn.sampling_rate:]
@@ -217,11 +316,11 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         # ----------------- Do STATISTICS DKPN
 
         # P
-        (DKPN_P_picks_model, DKPN_P_widths_model, DKPN_P_amplitude_model) = EV.extract_picks(
+        (DKPN_P_picks_model, DKPN_P_widths_model, DKPN_P_amplitude_model, DKPN_pred[0]) = EV.extract_picks(
                                                         DKPN_pred[0],
                                                         smooth=True,
                                                         thr=args.pickthreshold_p)
-        (DKPN_P_picks_label, DKPN_P_widths_label, DKPN_P_amplitude_label) = (
+        (DKPN_P_picks_label, DKPN_P_widths_label, DKPN_P_amplitude_label, DKPN_sample["y"][0]) = (
                                                        EV.extract_picks(
                                                         DKPN_sample["y"][0],
                                                         smooth=True,
@@ -235,11 +334,11 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
                                           thr=args.truepositive_p)
 
         # S
-        (DKPN_S_picks_model, DKPN_S_widths_model, DKPN_S_amplitude_model) = EV.extract_picks(
+        (DKPN_S_picks_model, DKPN_S_widths_model, DKPN_S_amplitude_model, DKPN_pred[1]) = EV.extract_picks(
                                                         DKPN_pred[1],
                                                         smooth=True,
                                                         thr=args.pickthreshold_s)
-        (DKPN_S_picks_label, DKPN_S_widths_label, DKPN_S_amplitude_label) = (
+        (DKPN_S_picks_label, DKPN_S_widths_label, DKPN_S_amplitude_label, DKPN_sample["y"][1]) = (
                                                        EV.extract_picks(
                                                         DKPN_sample["y"][1],
                                                         smooth=True,
@@ -258,17 +357,16 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         dkpn_s_pick_residuals_fp.extend(DKPN_residual_FP_S)
 
         # === Populate Picks
-        # "trace_id", "sample_idx", "phase", "width", "amplitude", "label", "picker"
         for _xx in range(len(DKPN_P_picks_model)):
             PICKDICT[str(len(PICKDICT.keys()))] = [
-                'trace_'+str(rnidx[xx]),
+                'trace_'+str(rand_num_selection),
                 DKPN_P_picks_model[_xx], 'P',
                 DKPN_P_widths_model[_xx],
                 DKPN_P_amplitude_model[_xx], 'pred', 'DKPN'
             ]
         for _xx in range(len(DKPN_P_picks_label)):
             PICKDICT[str(len(PICKDICT.keys()))] = [
-                'trace_'+str(rnidx[xx]),
+                'trace_'+str(rand_num_selection),
                 DKPN_P_picks_label[_xx], 'P',
                 DKPN_P_widths_label[_xx],
                 DKPN_P_amplitude_label[_xx], 'ref', 'DKPN'
@@ -276,29 +374,28 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
 
         for _xx in range(len(DKPN_S_picks_model)):
             PICKDICT[str(len(PICKDICT.keys()))] = [
-                'trace_'+str(rnidx[xx]),
+                'trace_'+str(rand_num_selection),
                 DKPN_S_picks_model[_xx], 'S',
                 DKPN_S_widths_model[_xx],
                 DKPN_S_amplitude_model[_xx], 'pred', 'DKPN'
             ]
         for _xx in range(len(DKPN_S_picks_label)):
             PICKDICT[str(len(PICKDICT.keys()))] = [
-                'trace_'+str(rnidx[xx]),
+                'trace_'+str(rand_num_selection),
                 DKPN_S_picks_label[_xx], 'S',
                 DKPN_S_widths_label[_xx],
                 DKPN_S_amplitude_label[_xx], 'ref', 'DKPN'
             ]
 
-
         # ------------------------------------------------------------
         # ----------------- Do STATISTICS PN
 
         # P
-        (PN_P_picks_model, PN_P_widths_model, PN_P_amplitude_model) = EV.extract_picks(
+        (PN_P_picks_model, PN_P_widths_model, PN_P_amplitude_model, PN_pred[0]) = EV.extract_picks(
                                                         PN_pred[0],
                                                         smooth=True,
                                                         thr=args.pickthreshold_p)
-        (PN_P_picks_label, PN_P_widths_label, PN_P_amplitude_label) = (
+        (PN_P_picks_label, PN_P_widths_label, PN_P_amplitude_label, PN_sample["y"][0]) = (
                                                    EV.extract_picks(
                                                         PN_sample["y"][0],
                                                         smooth=True,
@@ -311,11 +408,11 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
                                         PN_stats_dict_P,
                                         thr=args.truepositive_p)
         # S
-        (PN_S_picks_model, PN_S_widths_model, PN_S_amplitude_model) = EV.extract_picks(
+        (PN_S_picks_model, PN_S_widths_model, PN_S_amplitude_model, PN_pred[1]) = EV.extract_picks(
                                                         PN_pred[1],
                                                         smooth=True,
                                                         thr=args.pickthreshold_s)
-        (PN_S_picks_label, PN_S_widths_label, PN_S_amplitude_label) = (
+        (PN_S_picks_label, PN_S_widths_label, PN_S_amplitude_label, PN_sample["y"][1]) = (
                                                    EV.extract_picks(
                                                         PN_sample["y"][1],
                                                         smooth=True,
@@ -334,17 +431,16 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         pn_s_pick_residuals_fp.extend(PN_residual_FP_S)
 
         # === Populate Picks
-        # "trace_id", "sample_idx", "phase", "width", "amplitude", "label", "picker"
         for _xx in range(len(PN_P_picks_model)):
             PICKDICT[str(len(PICKDICT.keys()))] = [
-                'trace_'+str(rnidx[xx]),
+                'trace_'+str(rand_num_selection),
                 PN_P_picks_model[_xx], 'P',
                 PN_P_widths_model[_xx],
                 PN_P_amplitude_model[_xx], 'pred', 'PN'
             ]
         for _xx in range(len(PN_P_picks_label)):
             PICKDICT[str(len(PICKDICT.keys()))] = [
-                'trace_'+str(rnidx[xx]),
+                'trace_'+str(rand_num_selection),
                 PN_P_picks_label[_xx], 'P',
                 PN_P_widths_label[_xx],
                 PN_P_amplitude_label[_xx], 'ref', 'PN'
@@ -352,14 +448,14 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
 
         for _xx in range(len(PN_S_picks_model)):
             PICKDICT[str(len(PICKDICT.keys()))] = [
-                'trace_'+str(rnidx[xx]),
+                'trace_'+str(rand_num_selection),
                 PN_S_picks_model[_xx], 'S',
                 PN_S_widths_model[_xx],
                 PN_S_amplitude_model[_xx], 'pred', 'PN'
             ]
         for _xx in range(len(PN_S_picks_label)):
             PICKDICT[str(len(PICKDICT.keys()))] = [
-                'trace_'+str(rnidx[xx]),
+                'trace_'+str(rand_num_selection),
                 PN_S_picks_label[_xx], 'S',
                 PN_S_widths_label[_xx],
                 PN_S_amplitude_label[_xx], 'ref', 'PN'
@@ -369,6 +465,7 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
         # ----------------- PLOTS
 
         if (figureidx+1) <= args.nplots:
+            assert args.pickthreshold_p == args.pickthreshold_s
             fig = EV.create_AL_plots(
                     PN_sample["X"],
                     PN_sample["y"],
@@ -382,9 +479,12 @@ for (DKPN_gen, DKPN_gen_name, PN_gen_name) in do_stats_on:
                     DKPN_P_picks_model,  # The DKPN model picks IDX
                     DKPN_S_picks_model,  # The DKPN model picks IDX
                     save_path=str(
-                        STORE_DIR_RESULTS / ("Prediction_Example_%s_%s_%d.pdf" % (
-                                           DKPN_gen_name, PN_gen_name, figureidx))
-                                ))
+                        STORE_DIR_RESULTS / (
+                            "Prediction_Example_%s_%s_%d.pdf" % (
+                                DKPN_gen_name, PN_gen_name, figureidx))
+                                ),
+                    detect_thr=args.pickthreshold_p,
+                    fig_title=FIGURE_TITLE)
         #
         figureidx += 1
     

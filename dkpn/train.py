@@ -76,6 +76,11 @@ def __filter_sb_dataset__(indata, filter_for="INSTANCE"):
     elif filter_for.lower() == "aquila":
         indata.filter(indata.metadata["source_type"] == "earthquake", inplace=True)
         indata.filter(indata.metadata["path_ep_distance_km"] <= 100.0, inplace=True)
+        # indata.filter(
+        #     (indata.metadata["trace_p2_arrival_seconds"] -
+        #      indata.metadata["trace_p1_arrival_seconds"]) <= 15, inplace=True),
+        indata.filter(indata.metadata["PICK_COUNT"] >= 4, inplace=True)
+        indata.filter(indata.metadata["trace_p_weight"] <= 3, inplace=True)
 
     else:
         raise ValueError("Invalid Filtering key!")
@@ -112,11 +117,11 @@ def __select_database_and_size_AQUILA__(dataset_size, filtering=False,
                                         use_biggest_anyway=True,
                                         RANDOM_SEED=42,
                                         train_perc_size=0.60,
-                                        dev_perc_size=0.30,
-                                        test_perc_size=0.10):
+                                        dev_perc_size=0.10,
+                                        test_perc_size=0.30):
 
     dataset_train = sbd.WaveformDataset("/scratch/seisbench/datasets/aq2009counts",
-                                        sampling_rate=100, cache="trace")
+                                        sampling_rate=100.0, cache="trace")
     dataset_train = __add_split_column__(dataset_train,
                                          TRAIN_PERC=train_perc_size,
                                          DEV_PERC=dev_perc_size,
@@ -478,6 +483,7 @@ class TrainHelp_DomainKnowledgePhaseNet(object):
         np.random.seed(self.random_seed)
 
     def __worker_init_fn_full_seed__(self, wid):
+        """ Just know, no chanche to modify RanomWindow seed number inside """
         def seed_everything(seed):
             np.random.seed(seed)
             torch.manual_seed(seed)
@@ -856,6 +862,7 @@ class TrainHelp_PhaseNet(object):
         np.random.seed(self.random_seed)
 
     def __worker_init_fn_full_seed__(self, wid):
+        """ Just know, no chanche to modify RanomWindow seed number inside """
         def seed_everything(seed):
             np.random.seed(seed)
             torch.manual_seed(seed)

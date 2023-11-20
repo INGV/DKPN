@@ -13,7 +13,7 @@ def __reset_stats_dict__():
     return stats_dict
 
 
-def extract_picks(ts, smooth=True, thr=0.2, min_distance=50):
+def extract_picks(ts, thr=0.2, min_distance=50, smooth=True):
     """ Insert a prediction label TS per time """
     if smooth:
         smoothing_filter = [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]  # remove rapid oscillations between samples
@@ -27,7 +27,7 @@ def extract_picks(ts, smooth=True, thr=0.2, min_distance=50):
     widths = peak_widths(ts, peaks, rel_height=0.5, prominence_data=None, wlen=None)
     widths = widths[0]
     #
-    return (peaks, widths, ampl)
+    return (peaks, widths, ampl, ts)
 
 
 def compare_picks(peaks_model, peaks_ref, stats_dict, thr=25):
@@ -86,63 +86,145 @@ def create_AL_plots(wave3c,
                     picks_PN_S,
                     picks_DKPN_P,
                     picks_DKPN_S,
-                    save_path="image_probs.pdf"):
+                    save_path="image_probs.pdf",
+                    detect_thr=0.1,
+                    fig_title=None):
     #
-    fig = plt.figure(figsize=(20, 18))
-    axs = fig.subplots(9, 1, sharex=True)
-    
+    # fig = plt.figure(figsize=(8.3, 11.7))
+    fig = plt.figure(figsize=(9, 12))
+    axs = fig.subplots(9, 1)
+    # import matplotlib.gridspec as gridspec
+    # gs1 = gridspec.GridSpec(9, 1)
+    # gs1.update(wspace=0.025, hspace=0.01)  # set the spacing between axes.
+    # breakpoint()
+    # axs = [plt.subplots(gs1[gg]) for gg in range(len(gs1))]
+
+    # =============================  TIMESERIES
     # 0-1-2
-    axs[0].plot(wave3c[0], label="Z")
-    axs[1].plot(wave3c[1], label="N")
-    axs[2].plot(wave3c[2], label="E")
+    axs[0].plot(wave3c[0], label="Z", color="black", lw=1.2)
+    axs[1].plot(wave3c[1], label="N", color="#ff8099", lw=1.2)
+    axs[2].plot(wave3c[2], label="E", color="#0096a2", lw=1.2)
     # 3
-    axs[3].plot(label3c[0], label="P_true")
-    axs[3].plot(label3c[1], label="S_true")
+    axs[3].plot(label3c[0], label="P_label / pick", color="#0096a2", lw=1.2)
+    axs[3].plot(label3c[1], label="S_label / pick", color="#ff8099", lw=1.2)
     # 4
-    axs[4].plot(label_PN[0], label="PN_P")
-    axs[4].plot(label_PN[1], label="PN_S")
+    axs[4].plot(label_PN[0], label="PN_P", color="#0096a2", lw=1.2)
+    axs[4].plot(label_PN[1], label="PN_S", color="#ff8099", lw=1.2)
     # 5
-    axs[5].plot(label_DKPN[0], label="DKPN_P")
-    axs[5].plot(label_DKPN[1], label="DKPN_S")
+    axs[5].plot(label_DKPN[0], label="DKPN_P", color="#0096a2", lw=1.2)
+    axs[5].plot(label_DKPN[1], label="DKPN_S", color="#ff8099", lw=1.2)
+
     # 6
-    axs[6].plot(dkpn_cfs[0], label="DKPN_CF_Z")
-    axs[6].plot(dkpn_cfs[1], label="DKPN_CF_N")
-    axs[6].plot(dkpn_cfs[2], label="DKPN_CF_E")
+    axs[6].plot(dkpn_cfs[0], label="DKPN_CF_Z", color="black", lw=1.2)
+    axs[6].plot(dkpn_cfs[1], label="DKPN_CF_N", color="#ff8099", lw=1.2)
+    axs[6].plot(dkpn_cfs[2], label="DKPN_CF_E", color="#0096a2", lw=1.2)
     # 7-8
-    axs[7].plot(dkpn_cfs[3], label="DKPN_CF_incl.")
-    axs[8].plot(dkpn_cfs[4], label="DKPN_CF_mod.")
+    axs[7].plot(dkpn_cfs[3], label="DKPN_CF_incl.", color="black", lw=1.2)
+    axs[8].plot(dkpn_cfs[4], label="DKPN_CF_mod.", color="black", lw=1.2)
 
+    # =============================  PICKS
+
+    # Thresholds
+    for _x, ax in enumerate(axs):
+        if _x in (3, 4, 5):
+            ax.axhline(y=detect_thr, color="darkgray", alpha=0.9, lw=1.0)
+
+    # TRUE-P
     for pp in picks_true_P:
-        for ax in axs:
-            ax.axvline(x=pp, color='red', linestyle='-')
+        ymin, ymax = 0.8, 1.0
+        for _x, ax in enumerate(axs):
+            ax.axvline(x=pp, ymin=ymin, ymax=ymax,
+                       color='#0096a2', lw=1.7)
 
+    # TRUE-S
     for ss in picks_true_S:
-        for ax in axs:
-            ax.axvline(x=ss, color='red', linestyle='-')
-    #
+        ymin, ymax = 0.8, 1.0
+        for _x, ax in enumerate(axs):
+            ax.axvline(x=ss, ymin=ymin, ymax=ymax,
+                       color="#ff8099", lw=1.7)
+
+    # PN-P
+    already_labeled_pick = False
     for pp in picks_PN_P:
-        for ax in axs:
-            ax.axvline(x=pp, color='green', linestyle='-')
-
+        ymin, ymax = 0.0, 0.3
+        for _x, ax in enumerate(axs):
+            if _x == 4:
+                if not already_labeled_pick:
+                    ax.axvline(x=pp, ymin=ymin, ymax=ymax,
+                               color='#d99a00', lw=1.7, alpha=0.9, linestyle='--',
+                               label="PN_pick")
+                    already_labeled_pick = True
+                else:
+                    ax.axvline(x=pp, ymin=ymin, ymax=ymax,
+                               color='#d99a00', lw=1.7, alpha=0.9, linestyle='--')
+            else:
+                ax.axvline(x=pp, ymin=ymin, ymax=ymax,
+                           color='#d99a00', lw=1.7, alpha=0.9, linestyle='--')
+    # PN-S
     for ss in picks_PN_S:
-        for ax in axs:
-            ax.axvline(x=ss, color='green', linestyle='-')
-    #
+        ymin, ymax = 0.0, 0.3
+        for _x, ax in enumerate(axs):
+            ax.axvline(x=ss,  ymin=ymin, ymax=ymax,
+                       color='#d99a00', lw=1.7, alpha=0.9, linestyle='--')
+
+    # '#d99a00'  gold
+    # '#0000FF'  deep-blue
+
+    # DKPN-P
+    already_labeled_pick = False
     for pp in picks_DKPN_P:
-        for ax in axs:
-            ax.axvline(x=pp, color='black', linestyle='-')
+        ymin, ymax = 0.0, 0.3
+        for _x, ax in enumerate(axs):
+            if _x == 5:
+                if not already_labeled_pick:
+                    ax.axvline(x=pp, ymin=ymin, ymax=ymax,
+                               color='#0000FF', lw=1.7, alpha=0.9, linestyle='--',
+                               label="DKPN_pick")
+                    already_labeled_pick = True
+                else:
+                    ax.axvline(x=pp, ymin=ymin, ymax=ymax,
+                               color='#0000FF', lw=1.7, alpha=0.9, linestyle='--')
+            else:
+                ax.axvline(x=pp, ymin=ymin, ymax=ymax,
+                           color='#0000FF', lw=1.7, alpha=0.9, linestyle='--')
 
+    # DKPN- S
     for ss in picks_DKPN_S:
-        for ax in axs:
-            ax.axvline(x=ss, color='black', linestyle='-')
+        ymin, ymax = 0.0, 0.3
+        for _x, ax in enumerate(axs):
+            ax.axvline(x=ss, ymin=ymin, ymax=ymax,
+                       color='#0000FF', lw=1.7, alpha=0.9, linestyle='--')
 
-    # FIX AX LIMIT + LEGEND
+    # =============================  AXIS LIMIT + LEGEND
     for xx, ax in enumerate(axs):
-        ax.legend()
-        if xx in (3, 4, 5):
+        # ---- TITLE
+        if xx == 0:
+            if not fig_title:
+                ax.set_title("missing title")
+            else:
+                ax.set_title(fig_title)
+
+        # ----
+        if xx in (0, 1, 2):
+            ax.set_ylabel("norm. counts")
+
+        elif xx in (3, 4, 5):
             ax.set_ylim(0, 1)
-        
+            ax.set_ylabel("probability")
+
+        elif xx in (6, 7, 8):
+            ax.set_ylabel("norm. values")
+
+        ax.legend(loc='upper left')
+        # --- All
+        ax.set_xlim(0, 3001)
+        if xx == len(axs)-1:
+            ax.set_xlabel("time (samples)")
+        else:
+            ax.set_xticklabels([])
+
     # STORE+SAVE
+    fig.subplots_adjust(hspace=0.05)
     plt.tight_layout()
     _ = fig.savefig(str(save_path))
     return fig
@@ -157,6 +239,7 @@ def create_residuals_plot(resP, resS, binwidth=0.025, save_path="image_residuals
                                                             'True Positive S-residuals')):
         bin_edges = np.arange(min(data), max(data) + binwidth, binwidth)
         ax.hist(data, bins=bin_edges, color=color)
+
         # Set labels and title
         ax.set_xlabel('residuals (s)')
         ax.set_ylabel('count')
