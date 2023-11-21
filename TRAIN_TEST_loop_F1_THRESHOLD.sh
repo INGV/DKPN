@@ -63,7 +63,7 @@ for ((a=0; a<length; a++)); do
     echo "... Test IN-DOMAIN"
     ./LoadEvaluate_DKPN.py -k DKPN_TrainDataset_${TRAINDATA}_Size_${DATASIZE}_Rnd_${RND}_LR_${LR}_Batch_${BATCH} \
                            -p PN_TrainDataset_${TRAINDATA}_Size_${DATASIZE}_Rnd_${RND}_LR_${LR}_Batch_${BATCH} \
-                           -d INSTANCE -s ${DATASIZE} \
+                           -d ${TRAINDATA} -s ${DATASIZE} \
                            -x ${THR} -y ${THR} -n 5000 -f 100 -a 10 -b 20 \
                            -o Results_${TRAINDATA}_${TRAINDATA}_${DATASIZE}_${THR}
 
@@ -77,7 +77,7 @@ for ((a=0; a<length; a++)); do
                              -p PN_TrainDataset_${TRAINDATA}_Size_${DATASIZE}_Rnd_${RND}_LR_${LR}_Batch_${BATCH} \
                              -d ${CROSS} -s ${DATASIZE} \
                              -x ${THR} -y ${THR} -n 5000 -f 100 -a 10 -b 20 \
-                             -o Results_${TRAINDATA}_${TESTDATA_CROSSDOMAIN}_${DATASIZE}_${THR}
+                             -o Results_${TRAINDATA}_${CROSS}_${DATASIZE}_${THR}
     done
   done
 done
