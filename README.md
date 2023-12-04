@@ -42,6 +42,5 @@ pip install pandas==1.3.2
 pip install matplotlib==3.5.1
 pip install seaborn
 pip install obspy==1.4.0
-
 pip install jupyterlab==3.3.3
 ```
