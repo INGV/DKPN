@@ -3,16 +3,13 @@
 Deep-Learning picker based on the U-net architecture of PhaseNet. 
 Final version to be fully embedded in SeisBench.
 
-Following this issue `https://github.com/seisbench/seisbench/issues/151#issuecomment-1356723017`,
-we may now switch to the original TensorFlow implemetnation of PN
+VERSION: _0.4.12_
 
-VERSION: _0.4.11_
-
-DATE: _10.2023_
+DATE: _11.2023_
 
 This version is the first fully fledged, stable release to be used
-in combination with `SeisBench (v0.3.0)`. When you install the package (with pip)
-it will automatically load all the weights in the seisbench cache/model dir.
+in combination with `SeisBench (v0.4.0)`.
+Soon it will be loaded to PyPI as well (and an easy-install through `pip` provided as well)
 
 
 ## Installation
@@ -32,11 +29,19 @@ $ conda env create -f dkpn_env.yml
 $ conda activate dkpn
 ```
 
-## Developing
-
-From v0.0.2 the code is open to contributions, just clone the `DEVELOP` branch
-on your local machine and continue from there:
+If problem installing (or unwanted package listed in the env), you could install the bare minimu as:
 
 ```bash
-$ git clone --branch DEVELOP --single-branch git@gitlab.rm.ingv.it:some/dkpn.git ./LOCALFOLDERNAME
+conda create -n dkpn python=3.9.12
+conda activate dkpn
+pip install numpy==1.24.3
+pip install scipy==1.8.0
+pip install torch==1.11.0 torchvision torchaudio
+pip install seisbench==0.4.0
+pip install pandas==1.3.2
+pip install matplotlib==3.5.1
+pip install seaborn
+pip install obspy==1.4.0
+
+pip install jupyterlab==3.3.3
 ```
