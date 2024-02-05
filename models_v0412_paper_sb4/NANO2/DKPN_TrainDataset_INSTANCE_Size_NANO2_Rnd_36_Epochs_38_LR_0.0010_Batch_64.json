@@ -1,0 +1,32 @@
+{
+    "docstring": "DKPN_TrainDataset_INSTANCE_Size_NANO2_Rnd_36_Epochs_38_LR_0.0010_Batch_64",
+    "model_args": {
+        "component_order": "ZNEIM",
+        "phases": "PSN",
+        "in_channels": 5,
+        "classes": 3,
+        "sampling_rate": 100
+    },
+    "seisbench_requirement": "0.3.0",
+    "version": "1",
+    "default_args": {
+        "overlap": 1500,
+        "P_threshold": 0.2,
+        "S_threshold": 0.2,
+        "fp_stabilization": 4,
+        "t_long": 4,
+        "freqmin": 0.5,
+        "corner": 1,
+        "perc_taper": 0.1,
+        "mode": "rms",
+        "clip": -999,
+        "log": true,
+        "normalize": false,
+        "polarization_win_len": 1,
+        "use_amax_only": false,
+        "blinding": [
+            250,
+            250
+        ]
+    }
+}

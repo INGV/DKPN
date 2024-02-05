@@ -1,0 +1,15 @@
+{
+    "docstring": "PN_TrainDataset_INSTANCE_Size_NANO2_Rnd_234_Epochs_40_LR_0.0010_Batch_64",
+    "model_args": {
+        "component_order": "ZNE",
+        "phases": "PSN"
+    },
+    "seisbench_requirement": "0.3.0",
+    "version": "1",
+    "default_args": {
+        "blinding": [
+            250,
+            250
+        ]
+    }
+}

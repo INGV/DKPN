@@ -1,6 +1,7 @@
 # CUSTOM
 releases/
-models*/
+#models*/
+models.std_norm.v*/
 .DS_Store
 
 # Byte-compiled / optimized / DLL files
